@@ -11,11 +11,11 @@ def dividir_texto_em_chunks(texto, nome_ficheiro, debug_mode=False, tamanho_chun
     """Divide o texto em chunks e associa metadados a cada um."""
     if not texto:
         if debug_mode:
-            st.warning(f"⚠️ DEBUG: Texto vazio para {nome_ficheiro}")
+            st.warning(f"DEBUG: Texto vazio para {nome_ficheiro}")
         return [], []
     
     if debug_mode:
-        st.write(f"📄 DEBUG: Processando '{nome_ficheiro}':")
+        st.write(f"DEBUG: Processando '{nome_ficheiro}':")
         st.write(f"  - Tamanho do texto: {len(texto)} caracteres")
     
     chunks, metadados = [], []
@@ -56,11 +56,11 @@ def buscar_contexto_relevante(colecao, pergunta, nomes_ficheiros, debug_mode=Fal
     """Busca híbrida: semântica + garantia de representação de todos os arquivos."""
     if colecao is None: 
         if debug_mode:
-            st.error("❌ DEBUG: Coleção é None!")
+            st.error("DEBUG: Coleção é None!")
         return ""
     
     if debug_mode:
-        st.info(f"🔍 DEBUG: Buscando chunks relevantes para: '{pergunta}'")
+        st.info(f"DEBUG: Buscando chunks relevantes para: '{pergunta}'")
     
     # Palavras-chave que indicam pedido de overview geral
     palavras_overview = ['overview', 'resumo', 'sumário', 'todos', 'cada', 'cada um', 'all', 'textos']
@@ -69,7 +69,7 @@ def buscar_contexto_relevante(colecao, pergunta, nomes_ficheiros, debug_mode=Fal
     try:
         if eh_overview_geral:
             if debug_mode:
-                st.info("🔍 DEBUG: Detectado pedido de overview geral - buscando de todos os arquivos")
+                st.info("DEBUG: Detectado pedido de overview geral - buscando de todos os arquivos")
             contexto, fontes = "", set()
             
             # Para cada arquivo, pega pelo menos 1-2 chunks
@@ -83,7 +83,7 @@ def buscar_contexto_relevante(colecao, pergunta, nomes_ficheiros, debug_mode=Fal
                 )
                 
                 if debug_mode:
-                    st.write(f"📄 DEBUG: Encontrados {len(resultados['documents'][0])} chunks para {nome_arquivo}")
+                    st.write(f"DEBUG: Encontrados {len(resultados['documents'][0])} chunks para {nome_arquivo}")
                 
                 for doc, meta in zip(resultados['documents'][0], resultados['metadatas'][0]):
                     fonte = meta.get('fonte', 'desconhecida')
@@ -91,12 +91,12 @@ def buscar_contexto_relevante(colecao, pergunta, nomes_ficheiros, debug_mode=Fal
                     fontes.add(fonte)
             
             if debug_mode:
-                st.info(f"✅ DEBUG: Garantida representação de {len(fontes)} arquivos de {len(nomes_ficheiros)} totais")
+                st.info(f"DEBUG: Garantida representação de {len(fontes)} arquivos de {len(nomes_ficheiros)} totais")
             
         else:
             # Busca semântica normal para perguntas específicas
             if debug_mode:
-                st.info("🔍 DEBUG: Busca semântica normal")
+                st.info("DEBUG: Busca semântica normal")
             resultados = colecao.query(query_texts=[pergunta], n_results=n_results, include=["documents", "metadatas"])
             
             contexto, fontes = "", set()
@@ -120,14 +120,14 @@ def buscar_contexto_relevante(colecao, pergunta, nomes_ficheiros, debug_mode=Fal
                     st.write("---")
         
         if debug_mode:
-            st.info(f"✅ DEBUG: Fontes únicas encontradas: {', '.join(sorted(fontes)) if fontes else 'Nenhuma'}")
-            st.write(f"📏 DEBUG: Tamanho total do contexto: {len(contexto)} caracteres")
+            st.info(f"DEBUG: Fontes únicas encontradas: {', '.join(sorted(fontes)) if fontes else 'Nenhuma'}")
+            st.write(f"DEBUG: Tamanho total do contexto: {len(contexto)} caracteres")
         
         return contexto
         
     except Exception as e:
         if debug_mode:
-            st.error(f"❌ DEBUG: Erro na busca: {e}")
+            st.error(f"DEBUG: Erro na busca: {e}")
         return ""
 
 def gerar_resposta_com_llm(contexto, pergunta, api_key, nomes_ficheiros, historico_chat, debug_mode=False, temperature=0.7, top_p=0.95, top_k=40, max_output_tokens=2048):
@@ -144,12 +144,12 @@ def gerar_resposta_com_llm(contexto, pergunta, api_key, nomes_ficheiros, histori
         )
         
         #Verificação do que está sendo enviado para a API
-        st.caption(f"🔧 **Config enviado para API:** T={temperature}, P={top_p}, K={top_k}, Max={max_output_tokens}")
+        st.caption(f"**Config enviado para API:** T={temperature}, P={top_p}, K={top_k}, Max={max_output_tokens}")
         
         model = genai.GenerativeModel('gemini-1.5-flash', generation_config=generation_config)
         
         if debug_mode:
-            st.write("📁 DEBUG: Arquivos que foram processados:")
+            st.write("DEBUG: Arquivos que foram processados:")
             for i, nome in enumerate(nomes_ficheiros):
                 st.write(f"  {i+1}. {nome}")
         
@@ -157,8 +157,8 @@ def gerar_resposta_com_llm(contexto, pergunta, api_key, nomes_ficheiros, histori
         historico_formatado = "\n".join([f"{msg['role']}: {msg['content']}" for msg in historico_chat])
         
         if debug_mode:
-            st.write(f"💬 DEBUG: Histórico tem {len(historico_chat)} mensagens")
-            st.write(f"🎛️ DEBUG: Parâmetros do LLM - Temperature: {temperature}, Top-p: {top_p}, Top-k: {top_k}, Max tokens: {max_output_tokens}")
+            st.write(f"DEBUG: Histórico tem {len(historico_chat)} mensagens")
+            st.write(f"DEBUG: Parâmetros do LLM - Temperature: {temperature}, Top-p: {top_p}, Top-k: {top_k}, Max tokens: {max_output_tokens}")
 
         prompt = f"""
         **Instruções:** Você é um assistente de pesquisa. Responda à "Última pergunta do usuário" baseando-se no "Contexto" e no "Histórico da Conversa".
@@ -178,21 +178,21 @@ def gerar_resposta_com_llm(contexto, pergunta, api_key, nomes_ficheiros, histori
         """
         
         if debug_mode:
-            with st.expander("🤖 DEBUG: Prompt enviado para o LLM"):
+            with st.expander("DEBUG: Prompt enviado para o LLM"):
                 st.text(prompt)
-                st.write(f"📏 Tamanho total do prompt: {len(prompt)} caracteres")
+                st.write(f"Tamanho total do prompt: {len(prompt)} caracteres")
         
         resposta = model.generate_content(prompt)
         
         # NOVO: Após gerar a resposta, mostrar metadados se disponível
         if hasattr(resposta, 'usage_metadata'):
-            st.caption(f"📊 **Usage API:** {resposta.usage_metadata}")
+            st.caption(f"**Usage API:** {resposta.usage_metadata}")
         
         if debug_mode:
-            st.write(f"✅ DEBUG: LLM respondeu com {len(resposta.text)} caracteres")
+            st.write(f"DEBUG: LLM respondeu com {len(resposta.text)} caracteres")
             # Tentar mostrar mais detalhes da resposta
             if hasattr(resposta, 'candidates'):
-                st.write(f"🔍 DEBUG: Número de candidatos: {len(resposta.candidates)}")
+                st.write(f"DEBUG: Número de candidatos: {len(resposta.candidates)}")
         
         return resposta.text
     except Exception as e:
@@ -202,14 +202,14 @@ def gerar_resposta_com_llm(contexto, pergunta, api_key, nomes_ficheiros, histori
 # --- INTERFACE DA APLICAÇÃO (UI) ---
 
 st.set_page_config(page_title="RAG Acadêmico", layout="wide", page_icon="🔬")
-st.title("🔬 RAG Acadêmico: Converse com seus Artigos")
+st.title("RAG Acadêmico: Converse com seus Artigos")
 
 with st.sidebar:
     st.header("1. Configuração")
     google_api_key = st.text_input("Sua Chave API do Google AI Studio", key="google_api_key", type="password")
     
     # NOVO: Controle de Debug
-    debug_mode = st.checkbox("🐛 Modo Debug", value=False, help="Mostra informações detalhadas sobre o processamento")
+    debug_mode = st.checkbox("Modo Debug", value=False, help="Mostra informações detalhadas sobre o processamento")
     
     # NOVO: Parâmetros do LLM
     with st.expander("🤖 Parâmetros do LLM"):
