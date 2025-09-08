@@ -24,21 +24,22 @@ Configuração Avançada do LLM: Ajuste fino dos parâmetros do modelo (Temperat
 🚀 Como Executar
 Para colocar a aplicação em funcionamento, siga os passos abaixo.
 
-1. Pré-requisitos
+#1. Pré-requisitos
 Python 3.8 ou superior
 
 pip (gerenciador de pacotes do Python)
 
-2. Instalação
+#2. Instalação
 Primeiro, clone este repositório e instale as dependências necessárias:
 
 Bash
 
-# Clone o repositório (opcional, se você já baixou os arquivos)
+Clone o repositório
 git clone https://https://github.com/Concius/UNESPedia-.git
+
 cd UNESPedia
 
-# Instale as dependências a partir do arquivo requirements.txt
+Instale as dependências a partir do arquivo requirements.txt
 pip install -r requirements.txt
 3. Configuração da API
 Para que a aplicação se comunique com o modelo Gemini, você precisa de uma chave de API do Google AI Studio.
@@ -51,7 +52,7 @@ Copie a chave gerada.
 
 Você irá inserir essa chave diretamente na interface da aplicação ao iniciá-la.
 
-4. Executando a Aplicação
+#4. Executando a Aplicação
 Com as dependências instaladas, inicie o servidor do Streamlit com o seguinte comando:
 
 Bash
