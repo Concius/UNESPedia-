@@ -35,8 +35,8 @@ Primeiro, clone este repositório e instale as dependências necessárias:
 Bash
 
 # Clone o repositório (opcional, se você já baixou os arquivos)
-git clone https://[URL-DO-SEU-REPOSITORIO].git
-cd [NOME-DA-PASTA-DO-PROJETO]
+git clone https://https://github.com/Concius/UNESPedia-.git
+cd UNESPedia
 
 # Instale as dependências a partir do arquivo requirements.txt
 pip install -r requirements.txt
