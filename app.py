@@ -7,14 +7,16 @@ import google.generativeai as genai
 
 # --- FUNÇÕES DE PROCESSAMENTO (LÓGICA) ---
 
-def dividir_texto_em_chunks(texto, nome_ficheiro, tamanho_chunk=1000, sobreposicao_chunk=200):
+def dividir_texto_em_chunks(texto, nome_ficheiro, debug_mode=False, tamanho_chunk=1000, sobreposicao_chunk=200):
     """Divide o texto em chunks e associa metadados a cada um."""
     if not texto:
-        st.warning(f"⚠️ DEBUG: Texto vazio para {nome_ficheiro}")
+        if debug_mode:
+            st.warning(f"DEBUG: Texto vazio para {nome_ficheiro}")
         return [], []
     
-    st.write(f"📄 DEBUG: Processando '{nome_ficheiro}':")
-    st.write(f"  - Tamanho do texto: {len(texto)} caracteres")
+    if debug_mode:
+        st.write(f"DEBUG: Processando '{nome_ficheiro}':")
+        st.write(f"  - Tamanho do texto: {len(texto)} caracteres")
     
     chunks, metadados = [], []
     inicio = 0
@@ -25,7 +27,8 @@ def dividir_texto_em_chunks(texto, nome_ficheiro, tamanho_chunk=1000, sobreposic
         metadados.append({"fonte": nome_ficheiro})
         inicio += tamanho_chunk - sobreposicao_chunk
     
-    st.write(f"  - Gerados {len(chunks)} chunks")
+    if debug_mode:
+        st.write(f"  - Gerados {len(chunks)} chunks")
     return chunks, metadados
 
 def criar_e_armazenar_embeddings(lista_total_chunks, lista_total_metadados):
@@ -49,13 +52,15 @@ def criar_e_armazenar_embeddings(lista_total_chunks, lista_total_metadados):
         st.error(f"Ocorreu um erro durante a criação dos embeddings: {e}")
         return None
 
-def buscar_contexto_relevante(colecao, pergunta, nomes_ficheiros, n_results=10):
+def buscar_contexto_relevante(colecao, pergunta, nomes_ficheiros, debug_mode=False, n_results=10):
     """Busca híbrida: semântica + garantia de representação de todos os arquivos."""
     if colecao is None: 
-        st.error("❌ DEBUG: Coleção é None!")
+        if debug_mode:
+            st.error("DEBUG: Coleção é None!")
         return ""
     
-    st.info(f"🔍 DEBUG: Buscando chunks relevantes para: '{pergunta}'")
+    if debug_mode:
+        st.info(f"DEBUG: Buscando chunks relevantes para: '{pergunta}'")
     
     # Palavras-chave que indicam pedido de overview geral
     palavras_overview = ['overview', 'resumo', 'sumário', 'todos', 'cada', 'cada um', 'all', 'textos']
@@ -63,7 +68,8 @@ def buscar_contexto_relevante(colecao, pergunta, nomes_ficheiros, n_results=10):
     
     try:
         if eh_overview_geral:
-            st.info("🔍 DEBUG: Detectado pedido de overview geral - buscando de todos os arquivos")
+            if debug_mode:
+                st.info("DEBUG: Detectado pedido de overview geral - buscando de todos os arquivos")
             contexto, fontes = "", set()
             
             # Para cada arquivo, pega pelo menos 1-2 chunks
@@ -76,18 +82,21 @@ def buscar_contexto_relevante(colecao, pergunta, nomes_ficheiros, n_results=10):
                     where={"fonte": nome_arquivo}
                 )
                 
-                st.write(f"📄 DEBUG: Encontrados {len(resultados['documents'][0])} chunks para {nome_arquivo}")
+                if debug_mode:
+                    st.write(f"DEBUG: Encontrados {len(resultados['documents'][0])} chunks para {nome_arquivo}")
                 
                 for doc, meta in zip(resultados['documents'][0], resultados['metadatas'][0]):
                     fonte = meta.get('fonte', 'desconhecida')
                     contexto += f"Fonte: {fonte}\nConteúdo: {doc}\n\n---\n\n"
                     fontes.add(fonte)
             
-            st.info(f"✅ DEBUG: Garantida representação de {len(fontes)} arquivos de {len(nomes_ficheiros)} totais")
+            if debug_mode:
+                st.info(f"DEBUG: Garantida representação de {len(fontes)} arquivos de {len(nomes_ficheiros)} totais")
             
         else:
             # Busca semântica normal para perguntas específicas
-            st.info("🔍 DEBUG: Busca semântica normal")
+            if debug_mode:
+                st.info("DEBUG: Busca semântica normal")
             resultados = colecao.query(query_texts=[pergunta], n_results=n_results, include=["documents", "metadatas"])
             
             contexto, fontes = "", set()
@@ -97,40 +106,59 @@ def buscar_contexto_relevante(colecao, pergunta, nomes_ficheiros, n_results=10):
                 fontes.add(fonte)
         
         # DEBUG: Mostrar cada chunk encontrado
-        with st.expander("🔍 DEBUG: Chunks encontrados na busca"):
-            for i, (doc, meta) in enumerate(zip(resultados['documents'][0] if not eh_overview_geral else [], resultados['metadatas'][0] if not eh_overview_geral else [])):
-                fonte = meta.get('fonte', 'desconhecida')
-                st.write(f"**Chunk {i+1}:**")
-                st.write(f"- Fonte: {fonte}")
-                st.write(f"- Tamanho do conteúdo: {len(doc)} caracteres")
-                st.write(f"- Primeiros 200 caracteres: {doc[:200]}...")
-                st.write("---")
+        if debug_mode:
+            with st.expander("🔍 DEBUG: Chunks encontrados na busca"):
+                chunks_para_mostrar = resultados['documents'][0] if not eh_overview_geral else []
+                metadados_para_mostrar = resultados['metadatas'][0] if not eh_overview_geral else []
+                
+                for i, (doc, meta) in enumerate(zip(chunks_para_mostrar, metadados_para_mostrar)):
+                    fonte = meta.get('fonte', 'desconhecida')
+                    st.write(f"**Chunk {i+1}:**")
+                    st.write(f"- Fonte: {fonte}")
+                    st.write(f"- Tamanho do conteúdo: {len(doc)} caracteres")
+                    st.write(f"- Primeiros 200 caracteres: {doc[:200]}...")
+                    st.write("---")
         
-        st.info(f"✅ DEBUG: Fontes únicas encontradas: {', '.join(sorted(fontes)) if fontes else 'Nenhuma'}")
-        st.write(f"📏 DEBUG: Tamanho total do contexto: {len(contexto)} caracteres")
+        if debug_mode:
+            st.info(f"DEBUG: Fontes únicas encontradas: {', '.join(sorted(fontes)) if fontes else 'Nenhuma'}")
+            st.write(f"DEBUG: Tamanho total do contexto: {len(contexto)} caracteres")
         
         return contexto
         
     except Exception as e:
-        st.error(f"❌ DEBUG: Erro na busca: {e}")
+        if debug_mode:
+            st.error(f"DEBUG: Erro na busca: {e}")
         return ""
 
-def gerar_resposta_com_llm(contexto, pergunta, api_key, nomes_ficheiros, historico_chat):
-    """Envia o prompt para o Gemini e retorna a resposta, agora com memória."""
+def gerar_resposta_com_llm(contexto, pergunta, api_key, nomes_ficheiros, historico_chat, debug_mode=False, temperature=0.7, top_p=0.95, top_k=40, max_output_tokens=2048):
+    """Envia o prompt para o Gemini com parâmetros configuráveis."""
     try:
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
         
-        # DEBUG: Mostrar informações sobre os arquivos processados
-        st.write("📁 DEBUG: Arquivos que foram processados:")
-        for i, nome in enumerate(nomes_ficheiros):
-            st.write(f"  {i+1}. {nome}")
+        # Configuração do modelo com parâmetros personalizáveis
+        generation_config = genai.types.GenerationConfig(
+            temperature=temperature,
+            top_p=top_p,
+            top_k=top_k,
+            max_output_tokens=max_output_tokens,
+        )
         
-        # NOVO: Formata o histórico do chat para incluir no prompt
+        #Verificação do que está sendo enviado para a API
+        st.caption(f"**Config enviado para API:** T={temperature}, P={top_p}, K={top_k}, Max={max_output_tokens}")
+        
+        model = genai.GenerativeModel('gemini-1.5-flash', generation_config=generation_config)
+        
+        if debug_mode:
+            st.write("DEBUG: Arquivos que foram processados:")
+            for i, nome in enumerate(nomes_ficheiros):
+                st.write(f"  {i+1}. {nome}")
+        
+        # Formata o histórico do chat
         historico_formatado = "\n".join([f"{msg['role']}: {msg['content']}" for msg in historico_chat])
         
-        # DEBUG: Mostrar tamanho do histórico
-        st.write(f"💬 DEBUG: Histórico tem {len(historico_chat)} mensagens")
+        if debug_mode:
+            st.write(f"DEBUG: Histórico tem {len(historico_chat)} mensagens")
+            st.write(f"DEBUG: Parâmetros do LLM - Temperature: {temperature}, Top-p: {top_p}, Top-k: {top_k}, Max tokens: {max_output_tokens}")
 
         prompt = f"""
         **Instruções:** Você é um assistente de pesquisa. Responda à "Última pergunta do usuário" baseando-se no "Contexto" e no "Histórico da Conversa".
@@ -149,15 +177,22 @@ def gerar_resposta_com_llm(contexto, pergunta, api_key, nomes_ficheiros, histori
         **Sua Resposta:**
         """
         
-        # DEBUG: Mostrar o prompt completo
-        with st.expander("🤖 DEBUG: Prompt enviado para o LLM"):
-            st.text(prompt)
-            st.write(f"📏 Tamanho total do prompt: {len(prompt)} caracteres")
+        if debug_mode:
+            with st.expander("DEBUG: Prompt enviado para o LLM"):
+                st.text(prompt)
+                st.write(f"Tamanho total do prompt: {len(prompt)} caracteres")
         
         resposta = model.generate_content(prompt)
         
-        # DEBUG: Mostrar resposta
-        st.write(f"✅ DEBUG: LLM respondeu com {len(resposta.text)} caracteres")
+        # NOVO: Após gerar a resposta, mostrar metadados se disponível
+        if hasattr(resposta, 'usage_metadata'):
+            st.caption(f"**Usage API:** {resposta.usage_metadata}")
+        
+        if debug_mode:
+            st.write(f"DEBUG: LLM respondeu com {len(resposta.text)} caracteres")
+            # Tentar mostrar mais detalhes da resposta
+            if hasattr(resposta, 'candidates'):
+                st.write(f"DEBUG: Número de candidatos: {len(resposta.candidates)}")
         
         return resposta.text
     except Exception as e:
@@ -167,20 +202,42 @@ def gerar_resposta_com_llm(contexto, pergunta, api_key, nomes_ficheiros, histori
 # --- INTERFACE DA APLICAÇÃO (UI) ---
 
 st.set_page_config(page_title="RAG Acadêmico", layout="wide", page_icon="🔬")
-st.title("🔬 RAG Acadêmico: Converse com seus Artigos")
+st.title("RAG Acadêmico: Converse com seus Artigos")
 
 with st.sidebar:
     st.header("1. Configuração")
     google_api_key = st.text_input("Sua Chave API do Google AI Studio", key="google_api_key", type="password")
     
+    # NOVO: Controle de Debug
+    debug_mode = st.checkbox("Modo Debug", value=False, help="Mostra informações detalhadas sobre o processamento")
+    
+    # NOVO: Parâmetros do LLM
+    with st.expander("🤖 Parâmetros do LLM"):
+        temperature = st.slider("Temperature", min_value=0.0, max_value=2.0, value=0.7, step=0.1, 
+                               help="Controla a criatividade. Valores baixos = mais conservador, altos = mais criativo")
+        
+        top_p = st.slider("Top-p (Nucleus Sampling)", min_value=0.0, max_value=1.0, value=0.95, step=0.05,
+                         help="Considera apenas os tokens com probabilidade cumulativa até este valor")
+        
+        top_k = st.slider("Top-k", min_value=1, max_value=100, value=40, step=1,
+                         help="Considera apenas os k tokens mais prováveis")
+        
+        max_output_tokens = st.slider("Max Output Tokens", min_value=100, max_value=8000, value=2048, step=100,
+                                    help="Número máximo de tokens na resposta")
+        
+        # Botão para resetar parâmetros
+        if st.button("↺ Resetar Parâmetros"):
+            st.rerun()
+    
     st.header("2. Documentos")
+
     arquivos_pdf = st.file_uploader("Carregue seus artigos em PDF", type="pdf", accept_multiple_files=True)
 
     if st.button("Processar Documentos", key="processar_docs"):
         if not arquivos_pdf:
             st.warning("Por favor, carregue ao menos um arquivo PDF.")
         else:
-            # CORREÇÃO: Inicializa as listas aqui para garantir que elas existam
+            # Inicializa as listas
             lista_total_chunks, lista_total_metadados, nomes_ficheiros = [], [], []
             with st.spinner("A processar documentos..."):
                 for arquivo_pdf in arquivos_pdf:
@@ -188,7 +245,10 @@ with st.sidebar:
                     nomes_ficheiros.append(arquivo_pdf.name)
                     leitor_pdf = pypdf.PdfReader(io.BytesIO(arquivo_pdf.getvalue()))
                     texto_pdf = "".join(p.extract_text() or "" for p in leitor_pdf.pages)
-                    chunks, metadados = dividir_texto_em_chunks(texto_pdf, arquivo_pdf.name)
+                    
+                    # AQUI: Passando o debug_mode
+                    chunks, metadados = dividir_texto_em_chunks(texto_pdf, arquivo_pdf.name, debug_mode)
+                    
                     lista_total_chunks.extend(chunks)
                     lista_total_metadados.extend(metadados)
 
@@ -198,8 +258,74 @@ with st.sidebar:
                 st.session_state.documentos_processados = True
                 st.session_state.messages = [] 
             st.success("Documentos processados e prontos!")
+    
+    if st.button("🧪 Teste REAL dos Parâmetros"):
+        st.session_state.teste_real = True
+    
+    if st.button("🎨 Teste CRIATIVO dos Parâmetros"):
+        st.session_state.teste_criativo = True
 
 # --- ÁREA PRINCIPAL DO CHAT ---
+if "teste_real" in st.session_state and st.session_state.teste_real:
+    st.session_state.teste_real = False
+    
+    if google_api_key:
+        st.write("### 🧪 Teste Real dos Parâmetros")
+        
+        # Teste 1: Temperature baixa
+        st.write("**Teste 1: Temperature = 0.0 (deve ser determinístico)**")
+        for i in range(3):
+            with st.spinner(f"Gerando resposta {i+1}/3..."):
+                resposta_baixa = gerar_resposta_com_llm(
+                    "", 
+                    "Complete: O céu é", 
+                    google_api_key, 
+                    [], 
+                    [], 
+                    False,  # debug_mode
+                    0.0,    # temperature baixa
+                    0.95, 40, 50  # outros parâmetros
+                )
+                st.write(f"Resposta {i+1}: {resposta_baixa}")
+        
+        st.write("**Teste 2: Temperature = 1.8 (deve ser criativo/variado)**")
+        for i in range(3):
+            with st.spinner(f"Gerando resposta {i+1}/3..."):
+                resposta_alta = gerar_resposta_com_llm(
+                    "", 
+                    "Complete: O céu é", 
+                    google_api_key, 
+                    [], 
+                    [], 
+                    False,  # debug_mode
+                    1.8,    # temperature alta
+                    0.95, 40, 50  # outros parâmetros
+                )
+                st.write(f"Resposta {i+1}: {resposta_alta}")
+                
+        st.success("✅ Se as respostas do Teste 1 forem muito similares e as do Teste 2 forem bem diferentes, os parâmetros estão funcionando!")
+    else:
+        st.error("Precisa da API key para testar!")
+
+if "teste_criativo" in st.session_state and st.session_state.teste_criativo:
+    st.session_state.teste_criativo = False
+    
+    if google_api_key:
+        st.write("### 🎨 Teste Criativo dos Parâmetros")
+        
+        pergunta_criativa = "Isso não tem nada haver com os textos. Qual o melhor sabor de sorvete? Sua resposta de conter um sabor"
+        
+        # Teste 1: Temperature baixa
+        st.write("**Temperature = 0.0 (conservador):**")
+        for i in range(3):
+            resposta = gerar_resposta_com_llm("", pergunta_criativa, google_api_key, [], [], False, 0.0, 0.95, 40, 100)
+            st.write(f"• {resposta}")
+        
+        # Teste 2: Temperature alta
+        st.write("**Temperature = 1.9 (criativo):**")
+        for i in range(3):
+            resposta = gerar_resposta_com_llm("", pergunta_criativa, google_api_key, [], [], False, 1.9, 0.95, 40, 100)
+            st.write(f"• {resposta}")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -220,9 +346,9 @@ if "documentos_processados" in st.session_state and st.session_state.documentos_
                 st.error("Por favor, insira a sua chave de API do Google na barra lateral.")
             else:
                 with st.spinner("A pensar..."):
-                    contexto = buscar_contexto_relevante(st.session_state.colecao, prompt_usuario, st.session_state.nomes_ficheiros)
+                    contexto = buscar_contexto_relevante(st.session_state.colecao, prompt_usuario, st.session_state.nomes_ficheiros, debug_mode)
                     # MODIFICADO: Passa o histórico da conversa para a função de geração
-                    resposta = gerar_resposta_com_llm(contexto, prompt_usuario, google_api_key, st.session_state.nomes_ficheiros, st.session_state.messages)
+                    resposta = gerar_resposta_com_llm(contexto, prompt_usuario, google_api_key, st.session_state.nomes_ficheiros, st.session_state.messages, debug_mode, temperature, top_p, top_k, max_output_tokens)
                     st.markdown(resposta)
                     st.session_state.messages.append({"role": "assistant", "content": resposta})
 else:
