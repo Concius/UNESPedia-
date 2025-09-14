@@ -1,0 +1,17 @@
+# config.yaml
+
+# Configurações para o processamento de PDFs
+pdf_processing:
+  chunk_size: 1000
+  chunk_overlap: 200
+
+# Configurações do Vector Store (ChromaDB)
+chromadb:
+  collection_name: "artigos_academicos"
+
+# Valores padrão para os parâmetros do Large Language Model (LLM)
+llm_defaults:
+  temperature: 0.6
+  top_p: 0.95
+  top_k: 40
+  max_output_tokens: 2048

@@ -3,3 +3,4 @@ google-generativeai
 chromadb
 pypdf
 duckduckgo-search
+PyYAML
