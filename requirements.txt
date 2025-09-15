@@ -1,6 +1,18 @@
+# requirements.txt
+
+# Core da Aplicação Web
 streamlit
-google-generativeai
-chromadb
+
+# Processamento de PDF e RAG
 pypdf
-duckduckgo-search
+chromadb
+sentence-transformers # Dependência do embedding_functions
+
+# Carregamento de Configuração
 PyYAML
+
+# Provedores de LLM
+google-generativeai
+openai
+anthropic
+deepseek
