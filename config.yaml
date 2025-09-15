@@ -1,0 +1,36 @@
+# config.yaml
+
+# Configurações para o processamento de PDFs
+pdf_processing:
+  chunk_size: 1000
+  chunk_overlap: 200
+
+# Configurações do Vector Store (ChromaDB)
+chromadb:
+  collection_name: "artigos_academicos"
+
+# Valores padrão para os parâmetros do Large Language Model (LLM)
+llm_defaults:
+  temperature: 0.6
+  top_p: 0.95
+  top_k: 40
+  max_output_tokens: 2048
+
+
+# --- CONFIGURAÇÕES DOS PROVEDORES DE LLM ---
+llm_providers:
+  Gemini:
+    api_key: "SUA_CHAVE_API_GEMINI_AQUI"
+    model: "gemini-1.5-flash"
+  OpenAI:
+    api_key: "SUA_CHAVE_API_OPENAI_AQUI"
+    model: "gpt-4o"
+  Claude:
+    api_key: "SUA_CHAVE_API_CLAUDE_AQUI"
+    model: "claude-sonnet-4-20250514"
+  Deepseek:
+    api_key: "SUA_CHAVE_API_DEEPSEEK_AQUI"
+    model: "deepseek-chat"
+  Moonshot Kimi:
+    api_key: "SUA_CHAVE_API_MOONSHOT_AQUI"
+    model: "moonshot-v1-8k"
