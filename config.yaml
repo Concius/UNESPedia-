@@ -4,6 +4,7 @@
 pdf_processing:
   chunk_size: 1000
   chunk_overlap: 200
+  n_results: 10
 
 # Configurações do Vector Store (ChromaDB)
 chromadb:
@@ -15,8 +16,7 @@ llm_defaults:
   top_p: 0.95
   top_k: 40
   max_output_tokens: 2048
-
-
+  
 # --- CONFIGURAÇÕES DOS PROVEDORES DE LLM ---
 llm_providers:
   Gemini:
@@ -34,3 +34,28 @@ llm_providers:
   Moonshot Kimi:
     api_key: "SUA_CHAVE_API_MOONSHOT_AQUI"
     model: "moonshot-v1-8k"
+
+# --- PRESETS DE CONFIGURAÇÃO DO LLM ---
+llm_presets:
+  "🤖 Preciso":
+    temperature: 0.2
+    top_p: 0.90
+    top_k: 20
+  "🧑‍🔬 Equilibrado":
+    temperature: 0.7
+    top_p: 0.95
+    top_k: 40
+  "🎨 Criativo":
+    temperature: 1.2
+    top_p: 0.98
+    top_k: 50
+
+# --- NOVA SECÇÃO: CONFIGURAÇÃO DO VECTOR STORE ---
+vector_stores:
+  ChromaDB:
+    type: "chroma"
+    path: "chroma_db_store"
+    collection_name: "artigos_academicos"
+  FAISS:
+    type: "faiss"
+    path: "faiss_index.pkl" # FAISS guarda tudo num único ficheiro
