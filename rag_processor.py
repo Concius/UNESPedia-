@@ -1,30 +1,28 @@
-# rag_processor.py (versão modificada)
+# rag_processor.py (versão final com abstração de vector store)
 
 import streamlit as st
-import chromadb
-from chromadb.utils import embedding_functions
 from config_loader import carregar_config
 
 # Carrega a configuração no início do módulo
 config = carregar_config()
 pdf_config = config['pdf_processing']
-db_config = config['chromadb']
+
+# As funções de criação e busca de embeddings foram removidas daqui.
+# Agora, este módulo apenas lida com o processamento de texto.
 
 def dividir_texto_em_chunks(texto, nome_ficheiro, debug_mode=False):
     """Divide o texto em chunks e associa metadados a cada um."""
-    # *** MODIFICADO: Usa valores do config.yaml ***
-    tamanho_chunk = pdf_config['chunk_size']
-    sobreposicao_chunk = pdf_config['chunk_overlap']
+    tamanho_chunk = pdf_config.get('chunk_size', 1000)
+    sobreposicao_chunk = pdf_config.get('chunk_overlap', 200)
 
+    # ... (o resto da função permanece igual) ...
     if not texto:
         if debug_mode:
             st.warning(f"⚠️ DEBUG: Texto vazio para {nome_ficheiro}")
         return [], []
-    
     if debug_mode:
         st.write(f"📄 DEBUG: Processando '{nome_ficheiro}':")
         st.write(f"  - Tamanho do texto: {len(texto)} caracteres")
-    
     chunks, metadados = [], []
     inicio = 0
     while inicio < len(texto):
@@ -33,111 +31,101 @@ def dividir_texto_em_chunks(texto, nome_ficheiro, debug_mode=False):
         chunks.append(chunk)
         metadados.append({"fonte": nome_ficheiro})
         inicio += tamanho_chunk - sobreposicao_chunk
-    
     if debug_mode:
         st.write(f"  - Gerados {len(chunks)} chunks")
     return chunks, metadados
 
-def criar_e_armazenar_embeddings(lista_total_chunks, lista_total_metadados):
-    """Cria embeddings e os armazena no ChromaDB com metadados."""
-    if not lista_total_chunks:
-        st.warning("Não há chunks para vetorizar.")
-        return None
-    try:
-        default_ef = embedding_functions.DefaultEmbeddingFunction()
-        cliente_chroma = chromadb.Client()
-        
-        # *** MODIFICADO: Usa o nome da coleção do config.yaml ***
-        collection_name = db_config['collection_name']
-        
-        if collection_name in [c.name for c in cliente_chroma.list_collections()]:
-             cliente_chroma.delete_collection(name=collection_name)
-        colecao = cliente_chroma.get_or_create_collection(name=collection_name, embedding_function=default_ef)
-        
-        st.info(f"Vetorizando e armazenando {len(lista_total_chunks)} chunks...")
-        ids = [f"chunk_{i}" for i in range(len(lista_total_chunks))]
-        colecao.add(documents=lista_total_chunks, metadatas=lista_total_metadados, ids=ids)
-        st.success("Embeddings e metadados armazenados!")
-        return colecao
-    except Exception as e:
-        st.error(f"Ocorreu um erro durante a criação dos embeddings: {e}")
-        return None
 
+def buscar_contexto_relevante(vector_store, pergunta, nomes_ficheiros, debug_mode=False):
+    """Busca contexto relevante usando a abstração do Vector Store."""
+    # Lê o n_results a partir do ficheiro de configuração
+    n_results = pdf_config.get('n_results', 10) # Usa 10 como fallback
 
-def buscar_contexto_relevante(colecao, pergunta, nomes_ficheiros, debug_mode=False, n_results=10):
-    """Busca híbrida: semântica + garantia de representação de todos os arquivos."""
-    if colecao is None: 
+    if vector_store is None:
         if debug_mode:
-            st.error("❌ DEBUG: Coleção é None!")
+            st.error("❌ DEBUG: Vector Store é None!")
         return ""
-    
+
     if debug_mode:
-        st.info(f"🔍 DEBUG: Buscando chunks relevantes para: '{pergunta}'")
-    
-    # Palavras-chave que indicam pedido de overview geral
+        st.info(f"🔍 DEBUG: Buscando chunks para: '{pergunta}' (n_results={n_results})")
+
     palavras_overview = ['overview', 'resumo', 'sumário', 'todos', 'cada', 'cada um', 'all', 'textos']
     eh_overview_geral = any(palavra in pergunta.lower() for palavra in palavras_overview)
-    
+
+    contexto_final = ""
+    fontes_final = set()
+    resultados_para_debug = None # Variavel para guardar os resultados para o expander de debug
+
     try:
         if eh_overview_geral:
             if debug_mode:
                 st.info("🔍 DEBUG: Detectado pedido de overview geral - buscando de todos os arquivos")
-            contexto, fontes = "", set()
-            
-            # Para cada arquivo, pega pelo menos 1-2 chunks
+
             for nome_arquivo in nomes_ficheiros:
-                # Busca específica para este arquivo focando em resumo/introdução
-                resultados = colecao.query(
-                    query_texts=[f"abstract introduction summary conclusion {pergunta}"], 
-                    n_results=2,
-                    include=["documents", "metadatas"],
-                    where={"fonte": nome_arquivo}
-                )
-                
+                # Onde clause só funciona com ChromaDB, então verificamos se o método suporta
+                try:
+                    resultados = vector_store.buscar(
+                        query_texts=f"abstract introduction summary conclusion {pergunta}",
+                        n_results=2,
+                        where={"fonte": nome_arquivo}
+                    )
+                except TypeError: # Se o 'where' não for suportado (como no FAISS)
+                    resultados = vector_store.buscar(
+                        query_texts=f"abstract introduction summary conclusion {pergunta}",
+                        n_results=2
+                    )
+
                 if debug_mode:
-                    st.write(f"📄 DEBUG: Encontrados {len(resultados['documents'][0])} chunks para {nome_arquivo}")
-                
-                for doc, meta in zip(resultados['documents'][0], resultados['metadatas'][0]):
-                    fonte = meta.get('fonte', 'desconhecida')
-                    contexto += f"Fonte: {fonte}\\nConteúdo: {doc}\\n\\n---\\n\\n"
-                    fontes.add(fonte)
-            
+                    st.write(f"📄 DEBUG: Encontrados {len(resultados.get('documents', [[]])[0])} chunks para {nome_arquivo}")
+
+                contexto, fontes = _formatar_resultados_da_busca(resultados)
+                contexto_final += contexto
+                fontes_final.update(fontes)
+
             if debug_mode:
-                st.info(f"✅ DEBUG: Garantida representação de {len(fontes)} arquivos de {len(nomes_ficheiros)} totais")
-            
+                st.info(f"✅ DEBUG: Garantida representação de {len(fontes_final)} arquivos de {len(nomes_ficheiros)} totais")
+
         else:
-            # Busca semântica normal para perguntas específicas
+            # Busca semântica normal
             if debug_mode:
                 st.info("🔍 DEBUG: Busca semântica normal")
-            resultados = colecao.query(query_texts=[pergunta], n_results=n_results, include=["documents", "metadatas"])
-            
-            contexto, fontes = "", set()
-            for doc, meta in zip(resultados['documents'][0], resultados['metadatas'][0]):
-                fonte = meta.get('fonte', 'desconhecida')
-                contexto += f"Fonte: {fonte}\\nConteúdo: {doc}\\n\\n---\\n\\n"
-                fontes.add(fonte)
-        
-        # DEBUG: Mostrar cada chunk encontrado
+            resultados = vector_store.buscar(query_texts=pergunta, n_results=n_results)
+            contexto_final, fontes_final = _formatar_resultados_da_busca(resultados)
+            resultados_para_debug = resultados # Guarda para o debug
+
         if debug_mode:
             with st.expander("🔍 DEBUG: Chunks encontrados na busca"):
-                chunks_para_mostrar = resultados['documents'][0] if not eh_overview_geral else []
-                metadados_para_mostrar = resultados['metadatas'][0] if not eh_overview_geral else []
-                
-                for i, (doc, meta) in enumerate(zip(chunks_para_mostrar, metadados_para_mostrar)):
-                    fonte = meta.get('fonte', 'desconhecida')
-                    st.write(f"**Chunk {i+1}:**")
-                    st.write(f"- Fonte: {fonte}")
-                    st.write(f"- Tamanho do conteúdo: {len(doc)} caracteres")
-                    st.write(f"- Primeiros 200 caracteres: {doc[:200]}...")
-                    st.write("---")
-        
+                # A variável 'resultados' pode não estar definida no fluxo de overview, então verificamos
+                if resultados_para_debug and resultados_para_debug.get('documents'):
+                    for i, (doc, meta) in enumerate(zip(resultados_para_debug['documents'][0], resultados_para_debug['metadatas'][0])):
+                        fonte = meta.get('fonte', 'desconhecida')
+                        st.write(f"**Chunk {i+1}:**")
+                        st.write(f"- Fonte: {fonte}")
+                        st.write(f"- Tamanho do conteúdo: {len(doc)} caracteres")
+                        st.write(f"- Primeiros 200 caracteres: {doc[:200]}...")
+                        st.write("---")
+
         if debug_mode:
-            st.info(f"✅ DEBUG: Fontes únicas encontradas: {', '.join(sorted(fontes)) if fontes else 'Nenhuma'}")
-            st.write(f"📏 DEBUG: Tamanho total do contexto: {len(contexto)} caracteres")
-        
-        return contexto
-        
+            st.info(f"✅ DEBUG: Fontes únicas encontradas: {', '.join(sorted(fontes_final)) if fontes_final else 'Nenhuma'}")
+            st.write(f"📏 DEBUG: Tamanho total do contexto: {len(contexto_final)} caracteres")
+
+        return contexto_final
+
     except Exception as e:
         if debug_mode:
             st.error(f"❌ DEBUG: Erro na busca: {e}")
         return ""
+
+
+def _formatar_resultados_da_busca(resultados):
+    """Função auxiliar para formatar os resultados da busca."""
+    contexto, fontes = "", set()
+    if not resultados or not resultados.get('documents') or not resultados['documents'][0]:
+        return contexto, fontes
+
+    for doc, meta in zip(resultados['documents'][0], resultados['metadatas'][0]):
+        fonte = meta.get('fonte', 'desconhecida')
+        contexto += f"Fonte: {fonte}\nConteúdo: {doc}\n\n---\n\n"
+        fontes.add(fonte)
+    
+    return contexto, fontes

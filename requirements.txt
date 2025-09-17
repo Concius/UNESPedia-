@@ -6,7 +6,6 @@ streamlit
 # Processamento de PDF e RAG
 pypdf
 chromadb
-sentence-transformers # Dependência do embedding_functions
 
 # Carregamento de Configuração
 PyYAML
@@ -16,3 +15,8 @@ google-generativeai
 openai
 anthropic
 deepseek
+
+# Vector Stores
+faiss-cpu
+tiktoken
+sentence-transformers # Para embeddings
