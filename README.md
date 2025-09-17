@@ -1,73 +1,90 @@
-# UNESPedia-
+# 🔬 UNESPedia
 
 <div align="center">
   <img src="https://img.shields.io/badge/Python-3.8%2B-blue?logo=python" alt="Python Version" />
-  <img src="https://img.shields.io/badge/Streamlit-Web%20App-red?logo=streamlit" alt="Streamlit" />
+  <img src="https://img.shields.io/badge/Streamlit-Framework-red?logo=streamlit" alt="Framework" />
+  <img src="https://img.shields.io/badge/Arquitetura-Modular-yellow" alt="Arquitetura Modular" />
 </div>
 
-## 🔬 UNESPedia: Converse com Seus Artigos
-
-Este projeto foi desenvolvido como parte da disciplina de **Aprendizado Profundo** do Programa de Pós-Graduação em Ciência da Computação (PPGCC) da Unesp, sob orientação do Prof. Dr. Denis Henrique de Oliveira.
+<div align="center">
+  <h3>Converse com Seus Artigos de Forma Inteligente</h3>
+</div>
 
 ---
 
 ## 📖 Sobre o Projeto
 
-O **UNESPedia** é uma aplicação web que utiliza a técnica de **Geração Aumentada por Recuperação (RAG)** para permitir que você converse com seus próprios documentos. Basta fazer o upload de artigos científicos em PDF, e obtenha respostas inteligentes e contextualizadas.
+O **UNESPedia** é uma aplicação web desenvolvida como parte da disciplina de Aprendizado Profundo do PPGCC-Unesp. Ele utiliza a técnica de **Geração Aumentada por Recuperação (RAG)** para permitir que você converse com os seus próprios documentos, transformando artigos densos em diálogos interativos.
 
-> Uma ferramenta poderosa para pesquisadores, estudantes e qualquer pessoa que precise extrair informações e insights de uma base de documentos de forma rápida e intuitiva.
+Construído com uma arquitetura modular e flexível, o UNESPedia é uma ferramenta poderosa para pesquisadores, estudantes e qualquer pessoa que precise extrair informações e insights de uma base de documentos de forma rápida e intuitiva.
 
----
+## ✨ Funcionalidades Principais
 
-## ✨ Funcionalidades
+O projeto evoluiu de um simples script para uma plataforma robusta com funcionalidades avançadas:
 
-- **Upload de Múltiplos PDFs**  
-  Carregue um ou mais artigos científicos para análise.
+### 🔌 Arquitetura Multi-LLM
+- Conecte-se a múltiplos provedores de LLM, como Gemini, OpenAI (GPT), Claude, Deepseek e Moonshot
+- A troca entre modelos é feita com um simples seletor na interface
 
-- **Processamento Inteligente**  
-  O texto é dividido em blocos (*chunks*) otimizados para análise pelo LLM.
+### 🗄️ Múltiplas Bases Vetoriais (Vector Stores)
+- Suporte para ChromaDB (persistente em disco) e FAISS (rápido, em memória)
+- A arquitetura permite adicionar novos vector stores facilmente
 
-- **Busca Semântica**  
-  Encontre os trechos mais relevantes dos documentos para responder às suas perguntas.
+### 🔑 Gestão de Chaves API Persistente
+- As suas chaves de API são salvas localmente no ficheiro `secrets.json`
+- Não precisa inserir as chaves a cada sessão
 
-- **Interface de Chat**  
-  Converse de forma fluida com seus documentos, mantendo o contexto do histórico.
+### 💬 Gestão Completa de Conversas
+- **Salvamento Automático**: Cada conversa é salva automaticamente após a resposta do assistente
+- **Carregar e Continuar**: Carregue conversas anteriores e continue de onde parou
+- **Renomear e Apagar**: Organize as suas sessões de chat diretamente pela interface
 
-- **Modo Depuração (Debug)**  
-  Veja em detalhes o que acontece "por trás dos panos", da divisão do texto ao prompt enviado ao modelo.
+### ✍️ Histórico de Chat Interativo
+- **Regenerar**: Não gostou da resposta? Peça ao assistente para gerar uma nova com um clique
+- **Editar**: Modifique qualquer mensagem (sua ou do assistente) para refinar o contexto da conversa
+- **Apagar**: Remova mensagens individuais para limpar o histórico
 
-- **Configuração Avançada do LLM**  
-  Ajuste os parâmetros do modelo (Temperature, Top-p, Top-k, Max Output Tokens) para controlar criatividade e estilo das respostas.
+### 🧠 Configuração Avançada
+- **Presets do LLM**: Alterne rapidamente entre configurações "Precisa", "Equilibrada" e "Criativa"
+- **Ajuste Fino**: Controle manual de parâmetros como Temperature, Top-p e Top-k
+- **Modo Depuração**: Ative para ver em detalhes o que acontece "por trás dos panos"
 
----
+### 📄 Upload e Processamento de PDFs
+- Carregue múltiplos artigos científicos para construir a sua base de conhecimento
 
 ## 🚀 Como Executar
 
 ### 1️⃣ Pré-requisitos
-
-- Python **3.8 ou superior**
-- **pip** (gerenciador de pacotes do Python)
+- Python 3.8 ou superior
+- pip (gerenciador de pacotes do Python)
+- Git
 
 ### 2️⃣ Instalação
 
 ```bash
-# Clone o repositório
-git clone https://github.com/Concius/UNESPedia-.git
+# 1. Clone o repositório
+git clone https://github.com/Concius/UNESPedia-.git 
 
-# Acesse a pasta do projeto
+# 2. Acesse a pasta do projeto
 cd UNESPedia-
 
-# Instale as dependências
+# 3. Instale todas as dependências
 pip install -r requirements.txt
+
+# 4. Crie o diretório para salvar as conversas
+mkdir chats
 ```
 
-### 3️⃣ Configuração da API
+### 3️⃣ Configuração das Chaves de API
 
-Para usar o modelo Gemini, obtenha uma chave de API do [Google AI Studio](https://aistudio.google.com/):
+As chaves de API agora são geridas de forma persistente:
 
-1. Acesse o Google AI Studio e crie uma nova chave de API.
-2. Copie a chave gerada.
-3. Insira a chave diretamente na interface da aplicação ao iniciar.
+1. Execute a aplicação pela primeira vez: `streamlit run app.py`
+2. Na barra lateral, selecione um provedor de LLM (ex: Gemini)
+3. Cole a sua chave de API no campo correspondente
+4. A chave será salva automaticamente no ficheiro `secrets.json`
+
+> **⚠️ Importante**: O ficheiro `secrets.json` está incluído no `.gitignore` para garantir que as suas chaves nunca sejam enviadas para o repositório.
 
 ### 4️⃣ Executando a Aplicação
 
@@ -75,18 +92,36 @@ Para usar o modelo Gemini, obtenha uma chave de API do [Google AI Studio](https:
 streamlit run app.py
 ```
 
-A aplicação será aberta automaticamente em seu navegador padrão.  
-Agora, basta inserir sua chave de API, fazer upload dos PDFs e começar a conversar!
+A aplicação será aberta automaticamente no seu navegador. Agora, basta carregar os seus PDFs, processá-los e começar a sua pesquisa!
 
----
+## 🛠️ Estrutura do Projeto (Para Colaboradores)
+
+O código é organizado de forma modular para facilitar a manutenção e a adição de novas funcionalidades:
+
+```
+UNESPedia/
+├── app.py                 # Ponto de entrada da aplicação (UI Streamlit)
+├── config.yaml           # Configurações centrais (modelos, presets, etc.)
+├── rag_processor.py      # Lógica de RAG (divisão de texto em chunks)
+├── llm_providers/        # Módulos para cada provedor de LLM
+├── vector_stores/        # Módulos para bases de dados vetoriais
+├── chat_manager.py       # Gestão de ficheiros de conversa
+├── secrets_manager.py    # Gestão de chaves de API
+└── requirements.txt      # Dependências do projeto
+```
 
 ## 💡 Sugestões & Contribuições
 
-Sinta-se à vontade para abrir issues e enviar pull requests!  
-Toda colaboração é bem-vinda para tornar o UNESPedia ainda mais útil para a comunidade acadêmica.
+Este projeto está em constante evolução. Sinta-se à vontade para:
+
+- 🐛 **Reportar bugs** abrindo uma issue
+- 💡 **Sugerir melhorias** através de issues
+- 🔧 **Contribuir com código** enviando pull requests
+
+Toda colaboração é bem-vinda para tornar o UNESPedia ainda mais útil para a comunidade acadêmica!
 
 ---
 
 <div align="center">
-  <img src="https://img.shields.io/badge/Feito%20com%20💙%20por-Concius-blue" />
+  Feito com 💙 por <a href="https://github.com/Concius">Concius</a>
 </div>
