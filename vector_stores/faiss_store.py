@@ -1,99 +1,66 @@
 # vector_stores/faiss_store.py
 
-import streamlit as st
-import faiss
+import os
 import pickle
 import numpy as np
+import faiss
 from sentence_transformers import SentenceTransformer
-from .base import VectorStore
+from .base import VectorStore   # delete if no ABC
 
 class FAISSStore(VectorStore):
-    def __init__(self, path):
+    def __init__(self, path: str, embedding_model: str, device: str = "cpu"):
         self.path = path
-        self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+        self.encoder = SentenceTransformer(embedding_model, device=device)
+        self.dim = self.encoder.get_sentence_embedding_dimension()
         self.index = None
-        self.documents = []  # Lista para guardar os textos e metadados
-        self._carregar_indice_e_documentos()
+        self.texts = []
+        self.metadatas = []
+        if os.path.exists(path):
+            self._load()
 
-    def _carregar_indice_e_documentos(self):
-        """Carrega o índice FAISS e a lista de documentos do disco."""
-        try:
-            with open(self.path, "rb") as f:
-                data = pickle.load(f)
-                self.index = faiss.deserialize_index(data["index"])
-                self.documents = data["documents"]
-                st.info(f"Índice FAISS carregado com {len(self.documents)} documentos.")
-        except FileNotFoundError:
-            # Se o ficheiro não existe, criamos um índice vazio
-            embedding_dim = self.embedding_model.get_sentence_embedding_dimension()
-            self.index = faiss.IndexFlatL2(embedding_dim)
-            st.info("Nenhum índice FAISS encontrado. Um novo foi criado.")
-        except Exception as e:
-            st.error(f"Erro ao carregar o índice FAISS: {e}")
+    # ---------- persistence ----------
+    def _save(self):
+        with open(self.path, "wb") as f:
+            pickle.dump({"index": faiss.serialize_index(self.index),
+                         "texts": self.texts,
+                         "metadatas": self.metadatas}, f)
 
-    def _salvar_indice_e_documentos(self):
-        """Salva o índice FAISS e a lista de documentos no disco."""
-        try:
-            with open(self.path, "wb") as f:
-                index_serializado = faiss.serialize_index(self.index)
-                data = {"index": index_serializado, "documents": self.documents}
-                pickle.dump(data, f)
-        except Exception as e:
-            st.error(f"Erro ao salvar o índice FAISS: {e}")
+    def _load(self):
+        with open(self.path, "rb") as f:
+            data = pickle.load(f)
+            self.index = faiss.deserialize_index(data["index"])
+            self.texts = data["texts"]
+            self.metadatas = data["metadatas"]
 
-    def carregar_ou_criar(self, chunks, metadados):
-        """Se não houver chunks, o carregamento já foi feito. Se houver, adiciona-os."""
-        if chunks:
+    def carregar_ou_criar(self, chunks=None, metadados=None):
+        """ABC hook: load or create index."""
+        if chunks:                # creation path
             self.adicionar(chunks, metadados)
+        # else: pure load path already handled in __init__
 
-    def adicionar(self, chunks, metadados):
-        """Adiciona documentos ao índice FAISS."""
+    # ---------- CRUD ----------
+    def adicionar(self, chunks, metadados=None):
         if not chunks:
             return
-        
-        try:
-            # Gera embeddings para os novos chunks
-            embeddings = self.embedding_model.encode(chunks, convert_to_tensor=False)
-            
-            # Adiciona os embeddings ao índice FAISS
-            self.index.add(np.array(embeddings).astype('float32'))
-            
-            # Adiciona os textos e metadados à nossa lista de documentos
-            for i in range(len(chunks)):
-                self.documents.append({"document": chunks[i], "metadata": metadados[i]})
-            
-            # Salva as alterações no disco
-            self._salvar_indice_e_documentos()
-            st.success(f"{len(chunks)} novos chunks adicionados ao FAISS!")
-            
-        except Exception as e:
-            st.error(f"Erro ao adicionar chunks ao FAISS: {e}")
+        embs = self.encoder.encode(chunks, normalize_embeddings=True)
+        if self.index is None:
+            self.index = faiss.IndexFlatIP(self.dim)  # cosine similarity
+        self.index.add(np.array(embs, dtype=np.float32))
+        self.texts.extend(chunks)
+        self.metadatas.extend(metadados or [{} for _ in chunks])
+        self._save()
 
-    def buscar(self, query_texts, n_results, where=None):
-        """Busca documentos no índice FAISS."""
-        try:
-            query_embedding = self.embedding_model.encode([query_texts])
-            distances, indices = self.index.search(np.array(query_embedding).astype('float32'), n_results)
-            
-            # Formata a saída para ser compatível com o que o ChromaDB retorna
-            docs_encontrados = []
-            metadados_encontrados = []
-            
-            # O 'where' no FAISS é um pós-filtro manual
-            resultados_filtrados_indices = []
-            if where and 'fonte' in where:
-                for idx in indices[0]:
-                    if self.documents[idx]['metadata']['fonte'] == where['fonte']:
-                        resultados_filtrados_indices.append(idx)
-            else:
-                resultados_filtrados_indices = indices[0]
-
-            for idx in resultados_filtrados_indices:
-                if idx != -1: # FAISS retorna -1 se não encontrar vizinhos suficientes
-                    docs_encontrados.append(self.documents[idx]['document'])
-                    metadados_encontrados.append(self.documents[idx]['metadata'])
-            
-            return {"documents": [docs_encontrados], "metadatas": [metadados_encontrados]}
-        except Exception as e:
-            st.error(f"Erro ao buscar no FAISS: {e}")
-            return None
+    def buscar(self, query_texts, n_results=5, where=None):
+        assert self.index is not None, "Índice vazio."
+        emb = self.encoder.encode([query_texts], normalize_embeddings=True)
+        D, I = self.index.search(np.array(emb, dtype=np.float32), k=n_results)
+        docs, meta = [], []
+        for idx in I[0]:
+            if idx != -1:
+                docs.append(self.texts[idx])
+                meta.append(self.metadatas[idx])
+        # crude post-filter if where clause given
+        if where and 'fonte' in where:
+            docs = [d for d, m in zip(docs, meta) if m.get('fonte') == where['fonte']]
+            meta = [m for m in meta if m.get('fonte') == where['fonte']]
+        return {"documents": [docs], "metadatas": [meta]}

@@ -1,61 +1,62 @@
 # config.yaml
-
-# Configurações para o processamento de PDFs
+# ====================  PDF / RAG  ====================
 pdf_processing:
-  chunk_size: 1000
-  chunk_overlap: 200
+  chunk_size: 512
+  chunk_overlap: 50
   n_results: 10
 
-# Configurações do Vector Store (ChromaDB)
-chromadb:
-  collection_name: "artigos_academicos"
+# ----------------  EMBEDDING (multilingual)  ----------------
+embedding:
+  model: sentence-transformers/paraphrase-multilingual-mpnet-base-v2
+  device: cpu          # cuda / cpu / mps
+  normalize: true
 
-# Valores padrão para os parâmetros do Large Language Model (LLM)
+# ====================  VECTOR STORES  ====================
+vector_stores:
+  ChromaDB:
+    type: chroma
+    path: chroma_db_store
+    collection_name: artigos_academicos
+  FAISS:
+    type: faiss
+    path: faiss_index.pkl
+
+# ====================  LLM DEFAULTS  ====================
 llm_defaults:
-  temperature: 0.6
+  temperature: 0.60
   top_p: 0.95
   top_k: 40
   max_output_tokens: 2048
-  
-# --- CONFIGURAÇÕES DOS PROVEDORES DE LLM ---
+
+# ====================  LLM PROVIDERS  ====================
 llm_providers:
   Gemini:
-    api_key: "SUA_CHAVE_API_GEMINI_AQUI"
-    model: "gemini-1.5-flash"
+    api_key: SUA_CHAVE_API_GEMINI_AQUI
+    model: gemini-1.5-flash
   OpenAI:
-    api_key: "SUA_CHAVE_API_OPENAI_AQUI"
-    model: "gpt-4o"
+    api_key: SUA_CHAVE_API_OPENAI_AQUI
+    model: gpt-4o
   Claude:
-    api_key: "SUA_CHAVE_API_CLAUDE_AQUI"
-    model: "claude-sonnet-4-20250514"
+    api_key: SUA_CHAVE_API_CLAUDE_AQUI
+    model: claude-sonnet-4-20250514
   Deepseek:
-    api_key: "SUA_CHAVE_API_DEEPSEEK_AQUI"
-    model: "deepseek-chat"
+    api_key: SUA_CHAVE_API_DEEPSEEK_AQUI
+    model: deepseek-chat
   Moonshot Kimi:
-    api_key: "SUA_CHAVE_API_MOONSHOT_AQUI"
-    model: "moonshot-v1-8k"
+    api_key: SUA_CHAVE_API_MOONSHOT_AQUI
+    model: moonshot-v1-8k
 
-# --- PRESETS DE CONFIGURAÇÃO DO LLM ---
+# ====================  PRESETS  ====================
 llm_presets:
   "🤖 Preciso":
-    temperature: 0.2
+    temperature: 0.20
     top_p: 0.90
     top_k: 20
   "🧑‍🔬 Equilibrado":
-    temperature: 0.7
+    temperature: 0.70
     top_p: 0.95
     top_k: 40
   "🎨 Criativo":
-    temperature: 1.2
+    temperature: 1.20
     top_p: 0.98
     top_k: 50
-
-# --- NOVA SECÇÃO: CONFIGURAÇÃO DO VECTOR STORE ---
-vector_stores:
-  ChromaDB:
-    type: "chroma"
-    path: "chroma_db_store"
-    collection_name: "artigos_academicos"
-  FAISS:
-    type: "faiss"
-    path: "faiss_index.pkl" # FAISS guarda tudo num único ficheiro

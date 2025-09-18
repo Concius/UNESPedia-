@@ -27,25 +27,34 @@ class LLMProvider(ABC):
 
     def _construir_prompt(self, contexto, pergunta, historico_chat, nomes_ficheiros):
         """
-        Método auxiliar para construir o prompt final.
-        Pode ser sobrescrito se um provedor precisar de um formato de prompt diferente.
+        Constrói o prompt final com instruções de citação.
         """
         historico_formatado = "\n".join([f"{msg['role']}: {msg['content']}" for msg in historico_chat])
 
+        # --- nova instrução de citação ---
+        citacao_instrucao = (
+            "IMPORTANTE: sempre que usar informações do contexto, "
+            "cite a fonte exatamente como: (Fonte, p. {page}, sec. {section}). "
+            "Se a página ou seção não estiver disponível, omita esse campo."
+        )
+
         prompt = f"""
-        **Instruções:** Você é um assistente de pesquisa. Responda à "Última pergunta do usuário" baseando-se no "Contexto" e no "Histórico da Conversa".
-        Os ficheiros carregados pelo usuário são: {', '.join(nomes_ficheiros)}.
+        Você é um assistente de pesquisa acadêmica. Responda à **Última pergunta do usuário** baseando-se **apenas** no **Contexto** e no **Histórico da Conversa**.
+
+        {citacao_instrucao}
+
+        Arquivos carregados: {', '.join(nomes_ficheiros)}.
 
         **Histórico da Conversa:**
         {historico_formatado}
 
-        **Contexto extraído dos documentos (use para basear a sua resposta):**
+        **Contexto (cada trecho já inclui página/seção):**
         ---
         {contexto}
         ---
 
         **Última pergunta do usuário:** {pergunta}
 
-        **Sua Resposta:**
+        **Sua resposta (em português, com citações):**
         """
         return prompt
