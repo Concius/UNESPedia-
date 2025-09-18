@@ -3,7 +3,10 @@ import json
 import os
 import streamlit as st
 
-SECRETS_FILE = "secrets.json"
+import os, pathlib
+SECRETS_DIR  = pathlib.Path.home() / ".unespedia"
+SECRETS_FILE = SECRETS_DIR / "secrets.json"
+SECRETS_DIR.mkdir(exist_ok=True)   # ← add this line
 
 def load_secrets():
     """Carrega os segredos do ficheiro JSON."""

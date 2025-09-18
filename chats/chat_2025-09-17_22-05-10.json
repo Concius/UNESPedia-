@@ -1,0 +1,10 @@
+[
+    {
+        "role": "user",
+        "content": "OI"
+    },
+    {
+        "role": "assistant",
+        "content": "Olá! Como posso ajudar?  A sua pergunta \"OI\" é muito genérica. Por favor, especifique o que você precisa.  Tenho acesso a informações sobre artigos de pesquisa em psicologia social, incluindo um artigo de Lüders et al. sobre redes de atitudes como realidades intergrupais.  Se você tiver uma pergunta específica sobre este artigo ou outro tópico relacionado, por favor, me informe.\n"
+    }
+]

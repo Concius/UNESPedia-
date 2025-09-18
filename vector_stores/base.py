@@ -7,7 +7,6 @@ class VectorStore(ABC):
     Classe base abstrata para provedores de Vector Store.
     Define a interface que todos os provedores devem implementar.
     """
-
     @abstractmethod
     def carregar_ou_criar(self, chunks, metadados):
         """

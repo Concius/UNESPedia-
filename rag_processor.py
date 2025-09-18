@@ -39,7 +39,8 @@ def dividir_texto_em_chunks(texto, nome_ficheiro, debug_mode=False):
 def buscar_contexto_relevante(vector_store, pergunta, nomes_ficheiros, debug_mode=False):
     """Busca contexto relevante usando a abstração do Vector Store."""
     # Lê o n_results a partir do ficheiro de configuração
-    n_results = pdf_config.get('n_results', 10) # Usa 10 como fallback
+    # inside buscar_contexto_relevante(...)
+    n_results = carregar_config()['pdf_processing']['n_results']
 
     if vector_store is None:
         if debug_mode:

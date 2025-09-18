@@ -6,50 +6,33 @@ from chromadb.utils import embedding_functions
 from .base import VectorStore
 
 class ChromaDBStore(VectorStore):
-    def __init__(self, path, collection_name):
-        self.path = path
-        self.collection_name = collection_name
-        self.cliente = chromadb.PersistentClient(path=self.path)
-        self.colecao = self._carregar_colecao()
-
-    def _carregar_colecao(self):
-        """Carrega ou cria a coleção no ChromaDB."""
-        default_ef = embedding_functions.DefaultEmbeddingFunction()
-        return self.cliente.get_or_create_collection(
-            name=self.collection_name,
-            embedding_function=default_ef
+    def __init__(self, path: str, collection_name: str, embedding_model: str, device: str = "cpu"):
+        self.ef = embedding_functions.SentenceTransformerEmbeddingFunction(
+            model_name=embedding_model, device=device
+        )
+        self.client = chromadb.PersistentClient(path=path)
+        self.collection = self.client.get_or_create_collection(
+            name=collection_name,
+            embedding_function=self.ef
         )
 
-    def carregar_ou_criar(self, chunks, metadados):
-        """No ChromaDB, get_or_create_collection já faz isso. Apenas adicionamos se houver chunks."""
-        if chunks:
+    def carregar_ou_criar(self, chunks=None, metadados=None):
+        """ABC hook: load or create index."""
+        if chunks:                # creation path
             self.adicionar(chunks, metadados)
-
-    def adicionar(self, chunks, metadados):
-        """Adiciona documentos à coleção."""
+        # else: pure load path already handled in __init__
+    # ---------- CRUD ----------
+    def adicionar(self, chunks, metadados=None):
         if not chunks:
             return
-        
-        # Gera IDs únicos para os novos chunks
-        # Para evitar colisões, podemos basear os IDs no número de documentos já existentes
-        count = self.colecao.count()
+        count = self.collection.count()
         ids = [f"chunk_{count + i}" for i in range(len(chunks))]
-        
-        try:
-            self.colecao.add(documents=chunks, metadatas=metadados, ids=ids)
-            st.success(f"{len(chunks)} novos chunks adicionados ao ChromaDB!")
-        except Exception as e:
-            st.error(f"Erro ao adicionar chunks ao ChromaDB: {e}")
+        self.collection.add(documents=chunks, metadatas=metadados, ids=ids)
 
-    def buscar(self, query_texts, n_results, where=None):
-        """Busca documentos na coleção."""
-        try:
-            return self.colecao.query(
-                query_texts=[query_texts],
-                n_results=n_results,
-                where=where,
-                include=["documents", "metadatas"]
-            )
-        except Exception as e:
-            st.error(f"Erro ao buscar no ChromaDB: {e}")
-            return None
+    def buscar(self, query_texts, n_results=5, where=None):
+        return self.collection.query(
+            query_texts=[query_texts],
+            n_results=n_results,
+            where=where,
+            include=["documents", "metadatas"]
+        )
