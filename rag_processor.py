@@ -1,21 +1,18 @@
-# rag_processor.py (versão final com abstração de vector store)
+# rag_processor.py 
 
 import streamlit as st
 from config_loader import carregar_config
+from pypdf import PdfReader
+import re 
 
 # Carrega a configuração no início do módulo
 config = carregar_config()
 pdf_config = config['pdf_processing']
 
-# As funções de criação e busca de embeddings foram removidas daqui.
-# Agora, este módulo apenas lida com o processamento de texto.
-
 def dividir_texto_em_chunks(texto, nome_ficheiro, debug_mode=False):
-    """Divide o texto em chunks e associa metadados a cada um."""
     tamanho_chunk = pdf_config.get('chunk_size', 1000)
     sobreposicao_chunk = pdf_config.get('chunk_overlap', 200)
 
-    # ... (o resto da função permanece igual) ...
     if not texto:
         if debug_mode:
             st.warning(f"⚠️ DEBUG: Texto vazio para {nome_ficheiro}")
@@ -23,14 +20,31 @@ def dividir_texto_em_chunks(texto, nome_ficheiro, debug_mode=False):
     if debug_mode:
         st.write(f"📄 DEBUG: Processando '{nome_ficheiro}':")
         st.write(f"  - Tamanho do texto: {len(texto)} caracteres")
+
+    # 1. split into pages (form-feed inserted by PyPDF)
+    paginas = texto.split('\f')
     chunks, metadados = [], []
-    inicio = 0
-    while inicio < len(texto):
-        fim = inicio + tamanho_chunk
-        chunk = texto[inicio:fim]
-        chunks.append(chunk)
-        metadados.append({"fonte": nome_ficheiro})
-        inicio += tamanho_chunk - sobreposicao_chunk
+
+    for num_pag, pag_texto in enumerate(paginas, 1):
+        # 2. very crude section splitter – keeps your window intact
+        secoes = re.split(r'\n([A-Z][A-ZÀ-ÿ ].{2,40})\n', pag_texto)
+        for i in range(1, len(secoes), 2):
+            titulo_secao = secoes[i].strip()
+            texto_secao  = secoes[i+1] if i+1 < len(secoes) else ""
+            # 3. YOUR original chunking loop – untouched
+            inicio = 0
+            while inicio < len(texto_secao):
+                fim = inicio + tamanho_chunk
+                chunk = texto_secao[inicio:fim]
+                chunks.append(chunk)
+                # 4. only new thing: two extra keys
+                metadados.append({
+                    "fonte": nome_ficheiro,
+                    "page": num_pag,
+                    "section": titulo_secao
+                })
+                inicio += tamanho_chunk - sobreposicao_chunk
+
     if debug_mode:
         st.write(f"  - Gerados {len(chunks)} chunks")
     return chunks, metadados
@@ -39,7 +53,6 @@ def dividir_texto_em_chunks(texto, nome_ficheiro, debug_mode=False):
 def buscar_contexto_relevante(vector_store, pergunta, nomes_ficheiros, debug_mode=False):
     """Busca contexto relevante usando a abstração do Vector Store."""
     # Lê o n_results a partir do ficheiro de configuração
-    # inside buscar_contexto_relevante(...)
     n_results = carregar_config()['pdf_processing']['n_results']
 
     if vector_store is None:

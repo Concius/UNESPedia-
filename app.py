@@ -103,7 +103,7 @@ def handle_response_generation(prompt):
 
     with st.chat_message("assistant"):
         placeholder = st.empty()
-        with st.spinner("A pensar..."):
+        with st.spinner("pensando..."):
             resposta = gerar_resposta_com_llm(
                 provider_name=provedor, 
                 api_key=api_key, 
@@ -121,7 +121,8 @@ def handle_response_generation(prompt):
                     "top_p": st.session_state.top_p, 
                     "top_k": st.session_state.top_k, 
                     "max_output_tokens": st.session_state.max_output_tokens
-                }
+                },
+                metadados=st.session_state.get("lista_metadados")
             )
             placeholder.markdown(resposta)
             st.session_state.messages.append({"role": "assistant", "content": resposta})
@@ -148,7 +149,7 @@ def copy_message(content):
     st.toast("Mensagem copiada!", icon="📋")
 
 # --- LAYOUT PRINCIPAL ---
-st.title("🔬 RAG Acadêmico: Converse com seus Artigos")
+st.title("🔬 UNESPedia LM: Converse com seus Artigos")
 
 # --- ÁREA DO CHAT ---
 chat_container = st.container()
@@ -278,6 +279,7 @@ with st.sidebar:
                         lista_metadados.extend(metadados)
                     if lista_chunks: 
                         st.session_state.vector_store.adicionar(lista_chunks, lista_metadados)
+                        st.session_state.lista_metadados = lista_metadados
                     st.session_state.nomes_ficheiros = nomes_ficheiros
                     st.session_state.documentos_processados = True
                 st.success("Documentos processados!")
