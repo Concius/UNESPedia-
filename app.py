@@ -9,6 +9,8 @@ from rag_processor import dividir_texto_em_chunks, buscar_contexto_relevante
 from vector_store_factory import get_vector_store
 import chat_manager
 import secrets_manager
+from metadata_extractor import extrair_metadados_pdf, filtrar_artigos_por_autor
+from researcher_profile import gerar_perfil_pesquisador
 
 # --- LAYOUT E CONFIGURAÇÃO INICIAL ---
 st.set_page_config(page_title="RAG Acadêmico", layout="wide", page_icon="🔬")
@@ -76,7 +78,8 @@ default_states = {
     'messages': [], 
     'current_chat': "Nova Conversa", 
     'editing_message_index': None,
-    'api_keys': secrets_manager.load_secrets()
+    'api_keys': secrets_manager.load_secrets(),
+    'lista_metadados_completos': []
 }
 
 for key, value in default_states.items():
@@ -266,25 +269,58 @@ with st.sidebar:
                 with st.spinner("A processar..."):
                     nomes_ficheiros = [f.name for f in arquivos_pdf]
                     lista_chunks, lista_metadados = [], []
+                    lista_metadados_completos = []  # ← NOVO
+
                     for arquivo in arquivos_pdf:
-                        texto = "".join(
-                            p.extract_text() or "" 
-                            for p in pypdf.PdfReader(io.BytesIO(arquivo.getvalue())).pages
+                        # ← NOVO: Extrair metadados
+                        pdf_bytes = arquivo.getvalue()
+                        
+                        metadata_completo = extrair_metadados_pdf(
+                            pdf_bytes, arquivo.name
                         )
+                        lista_metadados_completos.append(metadata_completo)
+
+                        # Processar texto (código original adaptado)
+                        texto = "".join(
+                            p.extract_text() or ""
+                            for p in pypdf.PdfReader(
+                                io.BytesIO(pdf_bytes)
+                            ).pages
+                        )
+                        
                         chunks, metadados = dividir_texto_em_chunks(
-                            texto, arquivo.name, 
+                            texto, arquivo.name,
                             st.session_state.get('debug_mode', False)
                         )
                         lista_chunks.extend(chunks)
                         lista_metadados.extend(metadados)
-                    if lista_chunks: 
-                        st.session_state.vector_store.adicionar(lista_chunks, lista_metadados)
+
+                    if lista_chunks:
+                        st.session_state.vector_store.adicionar(
+                            lista_chunks, lista_metadados
+                        )
                         st.session_state.lista_metadados = lista_metadados
+                        st.session_state.lista_metadados_completos = lista_metadados_completos  
+
                     st.session_state.nomes_ficheiros = nomes_ficheiros
                     st.session_state.documentos_processados = True
+                    st.session_state.lista_metadados_completos = lista_metadados_completos  
+
+
                 st.success("Documentos processados!")
-            else:
-                st.warning("Nenhum PDF carregado.")
+
+                # ← NOVO: Mostrar metadados extraídos
+                if 'lista_metadados_completos' in st.session_state and st.session_state.lista_metadados_completos:
+                    with st.expander("📄 Metadados Extraídos", expanded=False):
+                        for meta in st.session_state.lista_metadados_completos:
+                            st.write(f"**{meta['titulo'][:80]}...**")
+                            autores_str = ', '.join(meta['autores'][:3])
+                            if len(meta['autores']) > 3:
+                                autores_str += f" (e mais {len(meta['autores']) - 3})"
+                            st.write(f"- Autores: {autores_str}")
+                            if meta['ano']:
+                                st.write(f"- Ano: {meta['ano']}")
+                            st.write("---")
         
         st.divider()
         st.subheader("Configuração do LLM")
@@ -310,6 +346,104 @@ with st.sidebar:
         
         st.session_state.debug_mode = st.checkbox("🐛 Modo Debug", 
                                                  value=st.session_state.get('debug_mode', False))
+    
+    with st.expander("📊 Perfil de Pesquisador", expanded=False):
+        st.subheader("Analisar Pesquisador")
+        
+        # Verifica se há metadados processados
+        if 'lista_metadados_completos' not in st.session_state or not st.session_state.lista_metadados_completos:
+            st.warning("⚠️ Processe alguns documentos primeiro para gerar perfis de autores.")
+        else:
+            # ===== COLETA TODOS OS AUTORES ÚNICOS =====
+            todos_autores = set()  # Usa set para evitar duplicados
+            for meta in st.session_state.lista_metadados_completos:
+                for autor in meta['autores']:
+                    todos_autores.add(autor)
+            
+            # Converte para lista ordenada
+            lista_autores_unicos = sorted(list(todos_autores))
+            
+            if not lista_autores_unicos:
+                st.warning("⚠️ Nenhum autor foi detectado nos documentos processados.")
+            else:
+                # ===== SELEÇÃO DO PESQUISADOR =====
+                col1, col2 = st.columns([2, 1])
+                
+                with col1:
+                    st.write("**Opção 1:** Selecione um autor da lista")
+                    pesquisador_selecionado = st.selectbox(
+                        "Autores encontrados:",
+                        options=[""] + lista_autores_unicos,
+                        key="select_pesquisador"
+                    )
+                
+                with col2:
+                    st.write("**Opção 2:** Digite o nome")
+                    pesquisador_digitado = st.text_input(
+                        "Nome do pesquisador:",
+                        key="input_pesquisador"
+                    )
+                
+                # Decide qual nome usar (prioriza o digitado)
+                nome_pesquisador = pesquisador_digitado.strip() if pesquisador_digitado.strip() else pesquisador_selecionado
+                
+                # ===== BOTÃO GERAR PERFIL =====
+                if st.button("🔍 Gerar Perfil Completo", type="primary", disabled=not nome_pesquisador):
+                    # Importa o módulo de geração de perfil
+                    from researcher_profile import gerar_perfil_pesquisador
+                    
+                    with st.spinner(f"Analisando publicações de {nome_pesquisador}..."):
+                        perfil = gerar_perfil_pesquisador(
+                            nome_pesquisador=nome_pesquisador,
+                            lista_metadados=st.session_state.lista_metadados_completos,
+                            vector_store=st.session_state.vector_store,
+                            provider_name=st.session_state.provedor_selecionado,
+                            api_key=st.session_state.api_keys.get(st.session_state.provedor_selecionado),
+                            model_config=providers_config[st.session_state.provedor_selecionado],
+                            config_geracao={
+                                "temperature": 0.3,
+                                "top_p": 0.95,
+                                "top_k": 40,
+                                "max_output_tokens": 3000
+                            }
+                        )
+                    
+                    # Mostra o perfil
+                    st.markdown(f"## 📊 Perfil: {nome_pesquisador}")
+                    st.markdown(perfil)
+                    
+                    # Botão de download
+                    st.download_button(
+                        label="📥 Baixar Perfil (Markdown)",
+                        data=perfil,
+                        file_name=f"perfil_{nome_pesquisador.replace(' ', '_')}.md",
+                        mime="text/markdown"
+                    )
+                
+                # ===== MOSTRAR ARTIGOS DO PESQUISADOR =====
+                if nome_pesquisador:
+                    from metadata_extractor import filtrar_artigos_por_autor
+                    
+                    artigos_pesquisador = filtrar_artigos_por_autor(
+                        st.session_state.lista_metadados_completos,
+                        nome_pesquisador,
+                        threshold=0.7
+                    )
+                    
+                    with st.expander(f"📚 Artigos de {nome_pesquisador} ({len(artigos_pesquisador)} encontrados)", expanded=False):
+                        if not artigos_pesquisador:
+                            st.info("Nenhum artigo encontrado para este pesquisador com o threshold atual (0.7)")
+                        else:
+                            for i, meta in enumerate(artigos_pesquisador, 1):
+                                st.write(f"**{i}. {meta['titulo']}**")
+                                st.write(f"   - Autores: {', '.join(meta['autores'])}")
+                                st.write(f"   - Ano: {meta['ano'] if meta['ano'] else 'N/A'}")
+                                st.write(f"   - Posição: {meta['autores'].index(nome_pesquisador) + 1}º autor" 
+                                        if nome_pesquisador in meta['autores'] else "   - Coautor")
+                                st.write("")
+
+
+
 
     with st.expander("🤖 Parâmetros de Geração", expanded=False):
         st.write("**Presets**")
