@@ -3,3 +3,5 @@ secrets.json
 /workspaces/UNESPedia-/chats
 /workspaces/UNESPedia-/chroma_db_store
 /workspaces/UNESPedia-/chroma_db
+__pycache__
+/workspaces/UNESPedia-/perfis_salvos
