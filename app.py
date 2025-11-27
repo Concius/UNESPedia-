@@ -9,8 +9,10 @@ from rag_processor import dividir_texto_em_chunks, buscar_contexto_relevante
 from vector_store_factory import get_vector_store
 import chat_manager
 import secrets_manager
+import profile_manager
 from metadata_extractor import extrair_metadados_pdf, filtrar_artigos_por_autor
 from researcher_profile import gerar_perfil_pesquisador
+
 
 # --- LAYOUT E CONFIGURAÇÃO INICIAL ---
 st.set_page_config(page_title="RAG Acadêmico", layout="wide", page_icon="🔬")
@@ -347,6 +349,127 @@ with st.sidebar:
         st.session_state.debug_mode = st.checkbox("🐛 Modo Debug", 
                                                  value=st.session_state.get('debug_mode', False))
     
+    with st.expander("📚 Perfis Salvos", expanded=False):
+        st.subheader("Biblioteca de Pesquisadores")
+        
+        # Listar todos os perfis
+        perfis_disponiveis = profile_manager.listar_perfis_salvos()
+        
+        if not perfis_disponiveis:
+            st.info("📭 Nenhum perfil salvo ainda. Gere um perfil na seção abaixo para começar!")
+        else:
+            # Barra de pesquisa
+            query = st.text_input(
+                "🔍 Buscar por nome ou tag:",
+                placeholder="Ex: graph learning, recommendation systems",
+                key="search_perfis"
+            )
+            
+            # Filtrar perfis
+            perfis_filtrados = profile_manager.buscar_perfis(query, perfis_disponiveis)
+            
+            # Contador
+            st.write(f"**{len(perfis_filtrados)}** perfis encontrados")
+            
+            # Exibir perfis em cards
+            for perfil in perfis_filtrados:
+                with st.container():
+                    # Header do card
+                    col1, col2, col3 = st.columns([3, 1, 1])
+                    
+                    with col1:
+                        st.markdown(f"### 👤 {perfil['nome']}")
+                    
+                    with col2:
+                        if st.button("👁️ Ver", key=f"view_{perfil['filepath']}", use_container_width=True):
+                            st.session_state.perfil_visualizando = perfil['filepath']
+                    
+                    with col3:
+                        if st.button("🗑️ Apagar", key=f"del_{perfil['filepath']}", use_container_width=True):
+                            if profile_manager.apagar_perfil(perfil['filepath']):
+                                st.success("Perfil apagado!")
+                                st.rerun()
+                    
+                    # Metadados
+                    col_a, col_b = st.columns(2)
+                    with col_a:
+                        st.caption(f"📅 {perfil['data'][:10]}")
+                    with col_b:
+                        st.caption(f"📄 {perfil['num_artigos']} artigos")
+                    
+                    # Tags (mostra até 5 tags principais)
+                    if perfil['tags']:
+                        tags_display = perfil['tags'][:5]
+                        tags_html = " ".join([f'<span style="background-color: #e0e0e0; padding: 2px 8px; border-radius: 10px; font-size: 0.85em; margin-right: 4px;">{tag}</span>' for tag in tags_display])
+                        st.markdown(f"🏷️ {tags_html}", unsafe_allow_html=True)
+                        
+                        # Se tiver mais tags, mostra contador
+                        if len(perfil['tags']) > 5:
+                            st.caption(f"+ {len(perfil['tags']) - 5} tags")
+                    
+                    st.divider()
+            
+            # Modal de visualização (se um perfil foi clicado)
+            if 'perfil_visualizando' in st.session_state and st.session_state.perfil_visualizando:
+                perfil_completo = profile_manager.carregar_perfil(st.session_state.perfil_visualizando)
+                
+                if perfil_completo:
+                    st.markdown("---")
+                    st.markdown(f"## 📊 Perfil Detalhado: {perfil_completo['nome_pesquisador']}")
+                    
+                    # Botões de ação
+                    col1, col2, col3 = st.columns([2, 2, 1])
+                    
+                    with col1:
+                        # Download do perfil completo
+                        perfil_md_completo = profile_manager.exportar_perfil_markdown(perfil_completo)
+                        st.download_button(
+                            label="📥 Baixar Perfil Completo",
+                            data=perfil_md_completo,
+                            file_name=f"perfil_{perfil_completo['nome_pesquisador'].replace(' ', '_')}.md",
+                            mime="text/markdown",
+                            use_container_width=True
+                        )
+                    
+                    with col2:
+                        # Download apenas do texto do perfil
+                        st.download_button(
+                            label="📄 Baixar Só Perfil",
+                            data=perfil_completo['perfil_markdown'],
+                            file_name=f"perfil_simples_{perfil_completo['nome_pesquisador'].replace(' ', '_')}.md",
+                            mime="text/markdown",
+                            use_container_width=True
+                        )
+                    
+                    with col3:
+                        if st.button("✖️ Fechar", use_container_width=True):
+                            del st.session_state.perfil_visualizando
+                            st.rerun()
+                    
+                    # Exibe o perfil
+                    st.markdown(perfil_completo['perfil_markdown'])
+                    
+                    # Seção de tags expandível
+                    with st.expander("🏷️ Todas as Tags", expanded=False):
+                        tags_html = " ".join([
+                            f'<span style="background-color: #4CAF50; color: white; padding: 4px 12px; border-radius: 15px; font-size: 0.9em; margin: 4px; display: inline-block;">{tag}</span>' 
+                            for tag in perfil_completo['tags']
+                        ])
+                        st.markdown(tags_html, unsafe_allow_html=True)
+                    
+                    # Seção de artigos expandível
+                    with st.expander(f"📚 Artigos Analisados ({len(perfil_completo['artigos'])})", expanded=False):
+                        for i, artigo in enumerate(perfil_completo['artigos'], 1):
+                            st.write(f"**{i}. {artigo['titulo']}**")
+                            st.write(f"   - Ano: {artigo['ano'] if artigo['ano'] else 'N/A'}")
+                            st.write(f"   - Autores: {', '.join(artigo['autores'][:3])}")
+                            if len(artigo['autores']) > 3:
+                                st.write(f"     (+ {len(artigo['autores']) - 3} coautores)")
+                            st.write("")
+
+
+
+
     with st.expander("📊 Perfil de Pesquisador", expanded=False):
         st.subheader("Analisar Pesquisador")
         
@@ -391,7 +514,11 @@ with st.sidebar:
                 if st.button("🔍 Gerar Perfil Completo", type="primary", disabled=not nome_pesquisador):
                     # Importa o módulo de geração de perfil
                     from researcher_profile import gerar_perfil_pesquisador
-                    
+
+                    # Extrair keywords dos artigos antes de gerar perfil
+                    from researcher_profile import extrair_palavras_chave_simples
+                    keywords_sugeridas = extrair_palavras_chave_simples(artigos_pesquisador)
+
                     with st.spinner(f"Analisando publicações de {nome_pesquisador}..."):
                         perfil = gerar_perfil_pesquisador(
                             nome_pesquisador=nome_pesquisador,
@@ -411,7 +538,22 @@ with st.sidebar:
                     # Mostra o perfil
                     st.markdown(f"## 📊 Perfil: {nome_pesquisador}")
                     st.markdown(perfil)
-                    
+                    try:
+                        filepath_salvo = profile_manager.salvar_perfil(
+                            nome_pesquisador=nome_pesquisador,
+                            perfil_texto=perfil,
+                            artigos=artigos_pesquisador,
+                            keywords_artigos=keywords_sugeridas if 'keywords_sugeridas' in locals() else None
+                        )
+                        st.success(f"✅ Perfil salvo automaticamente!")
+                        
+                        # Botão para ver na biblioteca
+                        if st.button("📚 Ver na Biblioteca de Perfis"):
+                            st.session_state.perfil_visualizando = filepath_salvo
+                            st.rerun()
+                    except Exception as e:
+                        st.warning(f"⚠️ Não foi possível salvar o perfil automaticamente: {e}")
+
                     # Botão de download
                     st.download_button(
                         label="📥 Baixar Perfil (Markdown)",
