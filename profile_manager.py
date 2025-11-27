@@ -238,8 +238,16 @@ def exportar_perfil_markdown(perfil_data: Dict) -> str:
 
 ## 📊 Estatísticas
 
-- **Total de artigos analisados:** {perfil_data['estatisticas']['num_artigos']}
-- **Período de publicação:** {min(perfil_data['estatisticas']['anos'])} - {max(perfil_data['estatisticas']['anos'])}
+- **Total de artigos analisados:** {perfil_data['estatisticas']['num_artigos']}"""
+    
+    # Adiciona período apenas se houver anos
+    anos = perfil_data['estatisticas']['anos']
+    if anos:
+        md += f"\n- **Período de publicação:** {min(anos)} - {max(anos)}"
+    else:
+        md += f"\n- **Período de publicação:** Não disponível"
+    
+    md += f"""
 - **Número de colaboradores únicos:** {perfil_data['estatisticas']['num_coautores']}
 
 ## 🏷️ Tags

@@ -400,7 +400,10 @@ with st.sidebar:
                     # Tags (mostra até 5 tags principais)
                     if perfil['tags']:
                         tags_display = perfil['tags'][:5]
-                        tags_html = " ".join([f'<span style="background-color: #e0e0e0; padding: 2px 8px; border-radius: 10px; font-size: 0.85em; margin-right: 4px;">{tag}</span>' for tag in tags_display])
+                        tags_html = " ".join([
+                            f'<span style="background-color: #2196F3; color: #FFFFFF; padding: 3px 10px; border-radius: 12px; font-size: 0.85em; margin: 4px; display: inline-block; font-weight: 500; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">{tag}</span>' 
+                            for tag in tags_display
+                        ])
                         st.markdown(f"🏷️ {tags_html}", unsafe_allow_html=True)
                         
                         # Se tiver mais tags, mostra contador
@@ -452,7 +455,7 @@ with st.sidebar:
                     # Seção de tags expandível
                     with st.expander("🏷️ Todas as Tags", expanded=False):
                         tags_html = " ".join([
-                            f'<span style="background-color: #4CAF50; color: white; padding: 4px 12px; border-radius: 15px; font-size: 0.9em; margin: 4px; display: inline-block;">{tag}</span>' 
+                            f'<span style="background-color: #4CAF50; color: #FFFFFF; padding: 5px 14px; border-radius: 15px; font-size: 0.9em; margin: 6px; display: inline-block; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">{tag}</span>' 
                             for tag in perfil_completo['tags']
                         ])
                         st.markdown(tags_html, unsafe_allow_html=True)
