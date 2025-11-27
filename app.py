@@ -478,12 +478,11 @@ with st.sidebar:
             st.warning("⚠️ Processe alguns documentos primeiro para gerar perfis de autores.")
         else:
             # ===== COLETA TODOS OS AUTORES ÚNICOS =====
-            todos_autores = set()  # Usa set para evitar duplicados
+            todos_autores = set()
             for meta in st.session_state.lista_metadados_completos:
                 for autor in meta['autores']:
                     todos_autores.add(autor)
             
-            # Converte para lista ordenada
             lista_autores_unicos = sorted(list(todos_autores))
             
             if not lista_autores_unicos:
@@ -510,59 +509,8 @@ with st.sidebar:
                 # Decide qual nome usar (prioriza o digitado)
                 nome_pesquisador = pesquisador_digitado.strip() if pesquisador_digitado.strip() else pesquisador_selecionado
                 
-                # ===== BOTÃO GERAR PERFIL =====
-                if st.button("🔍 Gerar Perfil Completo", type="primary", disabled=not nome_pesquisador):
-                    # Importa o módulo de geração de perfil
-                    from researcher_profile import gerar_perfil_pesquisador
-
-                    # Extrair keywords dos artigos antes de gerar perfil
-                    from researcher_profile import extrair_palavras_chave_simples
-                    keywords_sugeridas = extrair_palavras_chave_simples(artigos_pesquisador)
-
-                    with st.spinner(f"Analisando publicações de {nome_pesquisador}..."):
-                        perfil = gerar_perfil_pesquisador(
-                            nome_pesquisador=nome_pesquisador,
-                            lista_metadados=st.session_state.lista_metadados_completos,
-                            vector_store=st.session_state.vector_store,
-                            provider_name=st.session_state.provedor_selecionado,
-                            api_key=st.session_state.api_keys.get(st.session_state.provedor_selecionado),
-                            model_config=providers_config[st.session_state.provedor_selecionado],
-                            config_geracao={
-                                "temperature": 0.3,
-                                "top_p": 0.95,
-                                "top_k": 40,
-                                "max_output_tokens": 3000
-                            }
-                        )
-                    
-                    # Mostra o perfil
-                    st.markdown(f"## 📊 Perfil: {nome_pesquisador}")
-                    st.markdown(perfil)
-                    try:
-                        filepath_salvo = profile_manager.salvar_perfil(
-                            nome_pesquisador=nome_pesquisador,
-                            perfil_texto=perfil,
-                            artigos=artigos_pesquisador,
-                            keywords_artigos=keywords_sugeridas if 'keywords_sugeridas' in locals() else None
-                        )
-                        st.success(f"✅ Perfil salvo automaticamente!")
-                        
-                        # Botão para ver na biblioteca
-                        if st.button("📚 Ver na Biblioteca de Perfis"):
-                            st.session_state.perfil_visualizando = filepath_salvo
-                            st.rerun()
-                    except Exception as e:
-                        st.warning(f"⚠️ Não foi possível salvar o perfil automaticamente: {e}")
-
-                    # Botão de download
-                    st.download_button(
-                        label="📥 Baixar Perfil (Markdown)",
-                        data=perfil,
-                        file_name=f"perfil_{nome_pesquisador.replace(' ', '_')}.md",
-                        mime="text/markdown"
-                    )
-                
-                # ===== MOSTRAR ARTIGOS DO PESQUISADOR =====
+                # ===== FILTRAR ARTIGOS DO PESQUISADOR (ANTES DE GERAR) =====
+                artigos_pesquisador = []
                 if nome_pesquisador:
                     from metadata_extractor import filtrar_artigos_por_autor
                     
@@ -571,18 +519,90 @@ with st.sidebar:
                         nome_pesquisador,
                         threshold=0.7
                     )
+                
+                # ===== BOTÃO GERAR PERFIL =====
+                if st.button("🔍 Gerar Perfil Completo", type="primary", disabled=not nome_pesquisador):
                     
+                    # Verificar se encontrou artigos
+                    if not artigos_pesquisador:
+                        st.error(f"❌ Nenhum artigo encontrado para '{nome_pesquisador}' (threshold=0.7)")
+                    else:
+                        # Extrair keywords dos artigos ANTES de gerar perfil
+                        from researcher_profile import extrair_palavras_chave_simples
+                        keywords_sugeridas = extrair_palavras_chave_simples(artigos_pesquisador)
+                        
+                        # Importa o módulo de geração de perfil
+                        from researcher_profile import gerar_perfil_pesquisador
+                        
+                        with st.spinner(f"Analisando publicações de {nome_pesquisador}..."):
+                            perfil = gerar_perfil_pesquisador(
+                                nome_pesquisador=nome_pesquisador,
+                                lista_metadados=st.session_state.lista_metadados_completos,
+                                vector_store=st.session_state.vector_store,
+                                provider_name=st.session_state.provedor_selecionado,
+                                api_key=st.session_state.api_keys.get(st.session_state.provedor_selecionado),
+                                model_config=providers_config[st.session_state.provedor_selecionado],
+                                config_geracao={
+                                    "temperature": 0.3,
+                                    "top_p": 0.95,
+                                    "top_k": 40,
+                                    "max_output_tokens": 3000
+                                }
+                            )
+                        
+                        # Mostra o perfil
+                        st.markdown(f"## 📊 Perfil: {nome_pesquisador}")
+                        st.markdown(perfil)
+                        
+                        # ===== SALVAR PERFIL AUTOMATICAMENTE =====
+                        try:
+                            import profile_manager
+                            filepath_salvo = profile_manager.salvar_perfil(
+                                nome_pesquisador=nome_pesquisador,
+                                perfil_texto=perfil,
+                                artigos=artigos_pesquisador,  # ← AGORA ESTÁ DEFINIDA!
+                                keywords_artigos=keywords_sugeridas
+                            )
+                            st.success(f"✅ Perfil salvo automaticamente!")
+                            
+                            # Botão para ver na biblioteca
+                            if st.button("📚 Ver na Biblioteca de Perfis"):
+                                st.session_state.perfil_visualizando = filepath_salvo
+                                st.rerun()
+                        except Exception as e:
+                            st.warning(f"⚠️ Não foi possível salvar o perfil: {e}")
+                        
+                        # Botão de download
+                        st.download_button(
+                            label="📥 Baixar Perfil (Markdown)",
+                            data=perfil,
+                            file_name=f"perfil_{nome_pesquisador.replace(' ', '_')}.md",
+                            mime="text/markdown"
+                        )
+                
+                # ===== MOSTRAR ARTIGOS DO PESQUISADOR =====
+                if nome_pesquisador and artigos_pesquisador:
                     with st.expander(f"📚 Artigos de {nome_pesquisador} ({len(artigos_pesquisador)} encontrados)", expanded=False):
-                        if not artigos_pesquisador:
-                            st.info("Nenhum artigo encontrado para este pesquisador com o threshold atual (0.7)")
-                        else:
-                            for i, meta in enumerate(artigos_pesquisador, 1):
-                                st.write(f"**{i}. {meta['titulo']}**")
-                                st.write(f"   - Autores: {', '.join(meta['autores'])}")
-                                st.write(f"   - Ano: {meta['ano'] if meta['ano'] else 'N/A'}")
-                                st.write(f"   - Posição: {meta['autores'].index(nome_pesquisador) + 1}º autor" 
-                                        if nome_pesquisador in meta['autores'] else "   - Coautor")
-                                st.write("")
+                        for i, meta in enumerate(artigos_pesquisador, 1):
+                            st.write(f"**{i}. {meta['titulo']}**")
+                            st.write(f"   - Autores: {', '.join(meta['autores'])}")
+                            st.write(f"   - Ano: {meta['ano'] if meta['ano'] else 'N/A'}")
+                            
+                            # Encontrar posição do pesquisador
+                            try:
+                                posicao = next(
+                                    idx for idx, autor in enumerate(meta['autores'])
+                                    if nome_pesquisador.lower() in autor.lower()
+                                )
+                                if posicao == 0:
+                                    st.write(f"   - Posição: 1º autor (primeiro autor)")
+                                else:
+                                    st.write(f"   - Posição: {posicao + 1}º autor")
+                            except StopIteration:
+                                st.write(f"   - Posição: Coautor")
+                            
+                            st.write("")
+
 
 
 
