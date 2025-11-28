@@ -9,8 +9,10 @@ class GeminiProvider(LLMProvider):
         self.model_name = model_name
         genai.configure(api_key=self.api_key)
 
-    def gerar_resposta(self, contexto, pergunta, historico_chat, nomes_ficheiros, config_geracao):
-        prompt = self._construir_prompt(contexto, pergunta, historico_chat, nomes_ficheiros)
+    def gerar_resposta(self, contexto, pergunta, historico_chat, nomes_ficheiros, config_geracao,
+                      system_prompt=None, persona_prompt=None):
+        prompt = self._construir_prompt(contexto, pergunta, historico_chat, nomes_ficheiros,
+                                       system_prompt=system_prompt, persona_prompt=persona_prompt)
         
         generation_config = genai.types.GenerationConfig(
             temperature=config_geracao.get('temperature'),

@@ -14,15 +14,31 @@ class OpenAIProvider(LLMProvider):
             base_url=self.api_base_url  # Será None para a OpenAI oficial
         )
 
-    def gerar_resposta(self, contexto, pergunta, historico_chat, nomes_ficheiros, config_geracao):
+    def gerar_resposta(self, contexto, pergunta, historico_chat, nomes_ficheiros, config_geracao,
+                      system_prompt=None, persona_prompt=None):
         # Para APIs do tipo OpenAI, é melhor enviar o histórico como uma lista de mensagens
         # e o prompt do sistema separadamente.
         
-        prompt_sistema = f"""
-        **Instruções:** Você é um assistente de pesquisa. Responda à última pergunta do usuário baseando-se no "Contexto" fornecido e no "Histórico da Conversa".
-        Os ficheiros carregados pelo usuário são: {', '.join(nomes_ficheiros)}.
-        O contexto relevante extraído dos documentos é:\n---\n{contexto}\n---
-        """
+        # Usar system_prompt customizado se fornecido
+        if system_prompt is None:
+            system_prompt = """Você é um assistente de pesquisa acadêmica. Responda à última pergunta do usuário baseando-se no "Contexto" fornecido.
+
+IMPORTANTE: sempre que usar informações do contexto, cite a fonte exatamente como: (Fonte, p. {page}, sec. {section})."""
+        
+        # Adicionar persona se fornecida
+        persona_section = ""
+        if persona_prompt is not None:
+            persona_section = f"\n\n**PERSONA ATIVA:**\n{persona_prompt}\n"
+        
+        # Montar prompt_sistema final
+        prompt_sistema = f"""{system_prompt}{persona_section}
+
+**Arquivos carregados:** {', '.join(nomes_ficheiros)}
+
+**Contexto relevante:**
+---
+{contexto}
+---"""
         
         mensagens = [{"role": "system", "content": prompt_sistema}]
         

@@ -1,0 +1,47 @@
+{
+  "nome_pesquisador": "Mingxuan Ju",
+  "data_criacao": "2025-11-27T01:03:22.410869",
+  "perfil_markdown": "# Perfil Científico de Mingxuan Ju\n\n## 1. Resumo da Linha de Pesquisa\n\nCom base no artigo analisado, **Mingxuan Ju** demonstra interesse em pesquisa aplicada na área de sistemas de recomendação, especificamente focando em técnicas avançadas de aprendizado de máquina para otimização de rankings. Sua contribuição no artigo \"Non-parametric Graph Convolution for Re-ranking in Recommendation Systems\" indica uma abordagem metodológica que combina teoria de grafos com métodos não-paramétricos para resolver problemas de re-ranking em sistemas de recomendação.\n\nO pesquisador parece ter expertise em convoluções de grafos não-paramétricas, uma técnica sofisticada que permite processar dados estruturados em grafos sem assumir distribuições específicas dos dados. Esta abordagem é particularmente relevante para sistemas de recomendação, onde as relações entre usuários, itens e contextos podem ser modeladas como estruturas de grafos complexas.\n\nEmbora a análise seja limitada a um único artigo, a natureza da publicação (ACM Conference on Recommender Systems) sugere que Mingxuan Ju está inserido na comunidade científica de sistemas de recomendação, uma área de alta relevância prática e teórica na ciência da computação e inteligência artificial.\n\n## 2. Principais Contribuições Científicas\n\n### Contribuição 1: Desenvolvimento de Método de Convolução de Grafos Não-paramétrica\n- Proposta de uma abordagem não-paramétrica para convoluções de grafos aplicada ao re-ranking em sistemas de recomendação\n- **Artigo:** Non-parametric Graph Convolution for Re-ranking in Recommendation Systems (2025)\n\n## 3. Palavras-chave da Pesquisa\n\nGraph convolution, non-parametric methods, re-ranking, recommendation systems, machine learning, graph neural networks, collaborative filtering, ranking optimization, ACM conference\n\n## 4. Colaboradores Frequentes\n\nCom base no único artigo analisado, não é possível identificar colaboradores frequentes. Os coautores identificados são:\n- Zhongyu Ouyang\n- Soroush Vosoughi  \n- Yanfang Ye\n\n## 5. Análise Temporal\n\n**Limitação:** Com apenas um artigo de 2025 disponível para análise, não é possível realizar uma análise temporal significativa da evolução da pesquisa de Mingxuan Ju. Para uma análise temporal adequada, seria necessário acesso a um conjunto mais amplo de publicações do pesquisador ao longo de diferentes anos.\n\n**Observação:** O artigo analisado representa trabalho recente (2025), indicando atividade científica atual na área de sistemas de recomendação.",
+  "tags": [
+    "Graph convolution",
+    "Zhongyu Ouyang",
+    "ACM conference",
+    "parametric methods",
+    "recommendation systems",
+    "Soroush Vosoughi",
+    "ranking optimization",
+    "parametric Graph Convolution for Re",
+    "collaborative filtering",
+    "param",
+    "graph neural networks",
+    "ranking in Recommendation Systems",
+    "ranking",
+    "encontrado",
+    "chave da Pesquisa\n\nGraph convolution",
+    "machine learning",
+    "nonparametric methods",
+    "Proposta de uma abordagem n",
+    "ranking em sistemas de recomenda",
+    "reranking",
+    "Yanfang Ye"
+  ],
+  "artigos": [
+    {
+      "titulo": "Non-parametric Graph Convolution for Re-ranking in",
+      "ano": null,
+      "autores": [
+        "Zhongyu Ouyang",
+        "Mingxuan Ju",
+        "Soroush Vosoughi",
+        "Yanfang Ye"
+      ],
+      "fonte": "Non-parametric Graph Convolution for Re-ranking in.pdf",
+      "abstract": "Abstract não encontrado"
+    }
+  ],
+  "estatisticas": {
+    "num_artigos": 1,
+    "anos": [],
+    "num_coautores": 3
+  }
+}

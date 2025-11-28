@@ -10,6 +10,7 @@ from vector_store_factory import get_vector_store
 import chat_manager
 import secrets_manager
 import profile_manager
+import prompt_manager
 from metadata_extractor import extrair_metadados_pdf, filtrar_artigos_por_autor
 from researcher_profile import gerar_perfil_pesquisador
 
@@ -81,7 +82,10 @@ default_states = {
     'current_chat': "Nova Conversa", 
     'editing_message_index': None,
     'api_keys': secrets_manager.load_secrets(),
-    'lista_metadados_completos': []
+    'lista_metadados_completos': [],
+    'persona_selecionada': 'Pesquisador Acadêmico',
+    'system_prompt_customizado': prompt_manager.carregar_system_prompt(),
+    'mostrar_preview_prompt': False
 }
 
 for key, value in default_states.items():
@@ -127,7 +131,9 @@ def handle_response_generation(prompt):
                     "top_k": st.session_state.top_k, 
                     "max_output_tokens": st.session_state.max_output_tokens
                 },
-                metadados=st.session_state.get("lista_metadados")
+                metadados=st.session_state.get("lista_metadados"),
+                system_prompt=st.session_state.system_prompt_customizado,
+                persona_prompt=prompt_manager.carregar_personas()[next(i for i, p in enumerate(prompt_manager.carregar_personas()) if p['nome'] == st.session_state.persona_selecionada)]['prompt']
             )
             placeholder.markdown(resposta)
             st.session_state.messages.append({"role": "assistant", "content": resposta})
@@ -349,6 +355,248 @@ with st.sidebar:
         st.session_state.debug_mode = st.checkbox("🐛 Modo Debug", 
                                                  value=st.session_state.get('debug_mode', False))
     
+        # ========== SISTEMA DE PROMPTS E PERSONAS ==========
+    with st.expander("🎭 Prompts e Personas", expanded=False):
+        
+        # Criar tabs
+        tab1, tab2, tab3 = st.tabs(["🎭 Personas", "⚙️ System Prompt", "👁️ Preview"])
+        
+        # ========== TAB 1: PERSONAS ==========
+        with tab1:
+            st.subheader("Selecionar Persona")
+            
+            # Carregar personas disponíveis
+            personas = prompt_manager.carregar_personas()
+            
+            # Carregar personas disponíveis
+            try:
+                personas = prompt_manager.carregar_personas()
+                # DEBUG: ver o que retornou
+                if not isinstance(personas, list):
+                    st.error(f"❌ Erro: carregar_personas() retornou {type(personas)} ao invés de lista")
+                    st.stop()
+            except Exception as e:
+                st.error(f"❌ Erro ao carregar personas: {e}")
+                st.stop()
+
+            # Lista de opções para o selectbox (ícone + nome)
+            opcoes_personas = [f"{p['icone']} {p['nome']}" for p in personas]
+            
+            # Encontrar índice da persona atual
+            try:
+                nome_atual = st.session_state.persona_selecionada
+                idx_atual = next(i for i, p in enumerate(personas) if p['nome'] == nome_atual)
+            except (StopIteration, KeyError):
+                idx_atual = 0
+                st.session_state.persona_selecionada = personas[0]['nome']
+            
+            # Selectbox de personas
+            persona_escolhida = st.selectbox(
+                "Escolha uma persona:",
+                options=opcoes_personas,
+                index=idx_atual,
+                key="select_persona"
+            )
+            
+            # Atualizar estado quando mudar
+            idx_selecionado = opcoes_personas.index(persona_escolhida)
+            st.session_state.persona_selecionada = personas[idx_selecionado]['nome']
+            
+            # Mostrar descrição da persona
+            st.info(f"**Descrição:** {personas[idx_selecionado]['descricao']}")
+            
+            # Expander para ver o prompt completo
+            with st.expander("📄 Ver Prompt Completo", expanded=False):
+                st.code(personas[idx_selecionado]['prompt'], language="text")
+            
+            st.divider()
+            
+            # ========== CRIAR NOVA PERSONA ==========
+            st.subheader("✨ Criar Nova Persona")
+            
+            with st.form("form_nova_persona"):
+                nova_nome = st.text_input("Nome da Persona:", placeholder="Ex: Revisor Metodológico")
+                nova_icone = st.text_input("Ícone (emoji):", placeholder="Ex: 📊", max_chars=2)
+                nova_descricao = st.text_area("Descrição:", placeholder="Ex: Especialista em revisar metodologias científicas")
+                nova_prompt = st.text_area(
+                    "Prompt da Persona:", 
+                    placeholder="Ex: Você é um especialista em metodologia científica. Analise criticamente...",
+                    height=150
+                )
+                
+                submit_persona = st.form_submit_button("💾 Salvar Nova Persona", use_container_width=True)
+                
+                if submit_persona:
+                    if nova_nome and nova_descricao and nova_prompt:
+                        try:
+                            prompt_manager.salvar_persona(
+                                nome=nova_nome,
+                                descricao=nova_descricao,
+                                prompt=nova_prompt,
+                                icone=nova_icone or "🎭"
+                            )
+                            st.success(f"✅ Persona '{nova_nome}' criada com sucesso!")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"❌ Erro ao criar persona: {e}")
+                    else:
+                        st.warning("⚠️ Preencha todos os campos obrigatórios!")
+            
+            st.divider()
+            
+            # ========== GERENCIAR PERSONAS ==========
+            st.subheader("🗑️ Gerenciar Personas")
+            
+            # Listar apenas personas customizadas (não padrão)
+            personas_customizadas = [p for p in personas if not p.get('padrao', False)]
+            
+            if personas_customizadas:
+                persona_para_apagar = st.selectbox(
+                    "Selecione uma persona para apagar:",
+                    options=[p['nome'] for p in personas_customizadas],
+                    key="select_apagar_persona"
+                )
+                
+                if st.button("🗑️ Apagar Persona", type="secondary"):
+                    try:
+                        prompt_manager.apagar_persona(persona_para_apagar)
+                        st.success(f"✅ Persona '{persona_para_apagar}' apagada!")
+                        # Se era a persona ativa, voltar para padrão
+                        if st.session_state.persona_selecionada == persona_para_apagar:
+                            st.session_state.persona_selecionada = personas[0]['nome']
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ Erro ao apagar: {e}")
+            else:
+                st.info("ℹ️ Nenhuma persona customizada ainda. Crie uma acima!")
+        
+        # ========== TAB 2: SYSTEM PROMPT ==========
+        with tab2:
+            st.subheader("⚙️ Editar System Prompt")
+            
+            # Carregar prompt atual
+            prompt_atual = st.session_state.system_prompt_customizado
+            
+            # Text area para editar
+            novo_prompt = st.text_area(
+                "System Prompt:",
+                value=prompt_atual,
+                height=300,
+                help="Este é o prompt base que define o comportamento geral do assistente"
+            )
+            
+            # Validar tokens
+            num_tokens = len(novo_prompt.split())
+            st.caption(f"📊 Tokens aproximados: {num_tokens} (~{len(novo_prompt)} caracteres)")
+            
+            if num_tokens > 2000:
+                st.warning("⚠️ Prompt muito longo! Pode causar problemas. Recomendado: < 2000 tokens")
+            
+            # Botões de ação
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                if st.button("💾 Salvar Alterações", use_container_width=True, type="primary"):
+                    try:
+                        prompt_manager.salvar_system_prompt(novo_prompt)
+                        st.session_state.system_prompt_customizado = novo_prompt
+                        st.success("✅ System prompt salvo!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ Erro ao salvar: {e}")
+            
+            with col2:
+                if st.button("🔄 Resetar para Padrão", use_container_width=True):
+                    try:
+                        prompt_manager.resetar_system_prompt()
+                        st.session_state.system_prompt_customizado = prompt_manager.carregar_system_prompt()
+                        st.success("✅ System prompt resetado!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ Erro ao resetar: {e}")
+            
+            st.divider()
+            
+            # ========== IMPORTAR/EXPORTAR ==========
+            st.subheader("📦 Importar/Exportar Configuração")
+            
+            col_a, col_b = st.columns(2)
+            
+            with col_a:
+                # Exportar
+                config_json = prompt_manager.exportar_configuracao()
+                st.download_button(
+                    label="📥 Exportar Config",
+                    data=config_json,
+                    file_name="prompts_config.json",
+                    mime="application/json",
+                    use_container_width=True
+                )
+            
+            with col_b:
+                # Importar
+                arquivo_config = st.file_uploader(
+                    "📤 Importar Config",
+                    type=['json'],
+                    key="upload_config"
+                )
+                
+                if arquivo_config:
+                    try:
+                        config_data = arquivo_config.read().decode('utf-8')
+                        prompt_manager.importar_configuracao(config_data)
+                        st.success("✅ Configuração importada!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ Erro ao importar: {e}")
+        
+        # ========== TAB 3: PREVIEW ==========
+        with tab3:
+            st.subheader("👁️ Preview do Prompt Final")
+            
+            # Obter persona atual
+            persona_atual = next(
+                (p for p in personas if p['nome'] == st.session_state.persona_selecionada),
+                personas[0]
+            )
+            
+            # Contexto de exemplo
+            contexto_exemplo = "Este é um exemplo de contexto extraído dos documentos..."
+            pergunta_exemplo = "Qual é a principal contribuição deste trabalho?"
+            
+            # Gerar preview
+            preview = prompt_manager.preview_prompt(
+                system_prompt=st.session_state.system_prompt_customizado,
+                persona_prompt=persona_atual['prompt'],
+                contexto=contexto_exemplo,
+                pergunta=pergunta_exemplo
+            )
+            
+            # Mostrar métricas
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Tokens", f"~{len(preview.split())}")
+            with col2:
+                st.metric("Caracteres", len(preview))
+            with col3:
+                st.metric("Linhas", preview.count('\n'))
+            
+            # Avisos
+            if len(preview.split()) > 8000:
+                st.error("⚠️ AVISO: Prompt muito longo! Pode exceder limite do modelo.")
+            
+            # Mostrar preview
+            st.text_area(
+                "Preview do Prompt Final:",
+                value=preview,
+                height=400,
+                disabled=True
+            )
+            
+            st.info("💡 Este é o prompt que será enviado ao LLM quando você fizer uma pergunta.")
+
+
+
     with st.expander("📚 Perfis Salvos", expanded=False):
         st.subheader("Biblioteca de Pesquisadores")
         

@@ -4,7 +4,8 @@ from llm_factory import get_llm_provider
 
 
 def gerar_resposta_com_llm(provider_name, api_key, model_config, contexto, pergunta,
-                          historico_chat, nomes_ficheiros, config_geracao, metadados=None):
+                          historico_chat, nomes_ficheiros, config_geracao, metadados=None,
+                          system_prompt=None, persona_prompt=None):
     """
     Obtém o provedor de LLM correto e solicita a geração da resposta.
     Se 'metadados' for fornecido, injeta citações (página/secão) em cada chunk do contexto.
@@ -30,7 +31,9 @@ def gerar_resposta_com_llm(provider_name, api_key, model_config, contexto, pergu
             pergunta=pergunta,
             historico_chat=historico_chat,
             nomes_ficheiros=nomes_ficheiros,
-            config_geracao=config_geracao
+            config_geracao=config_geracao,
+            system_prompt=system_prompt,      
+            persona_prompt=persona_prompt     
         )
         return resposta
 

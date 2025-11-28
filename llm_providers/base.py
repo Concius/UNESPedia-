@@ -1,5 +1,7 @@
 # llm_providers/base.py
 
+# llm_providers/base.py
+
 from abc import ABC, abstractmethod
 
 class LLMProvider(ABC):
@@ -25,11 +27,23 @@ class LLMProvider(ABC):
         """
         pass
 
-    def _construir_prompt(self, contexto, pergunta, historico_chat, nomes_ficheiros):
+    def _construir_prompt(self, contexto, pergunta, historico_chat, nomes_ficheiros,
+                         system_prompt=None, persona_prompt=None):
         """
         Constrói o prompt final com instruções de citação.
         """
         historico_formatado = "\n".join([f"{msg['role']}: {msg['content']}" for msg in historico_chat])
+
+        # Usar system_prompt customizado se fornecido
+        if system_prompt is None:
+            base_instruction = "Você é um assistente de pesquisa acadêmica. Responda à **Última pergunta do usuário** baseando-se **apenas** no **Contexto** e no **Histórico da Conversa**."
+        else:
+            base_instruction = system_prompt
+        
+        # Adicionar persona se fornecida
+        persona_section = ""
+        if persona_prompt is not None:
+            persona_section = f"\n\n**PERSONA ATIVA:**\n{persona_prompt}"
 
         # --- nova instrução de citação ---
         citacao_instrucao = (
@@ -39,7 +53,7 @@ class LLMProvider(ABC):
         )
 
         prompt = f"""
-        Você é um assistente de pesquisa acadêmica. Responda à **Última pergunta do usuário** baseando-se **apenas** no **Contexto** e no **Histórico da Conversa**.
+        {base_instruction}{persona_section}
 
         {citacao_instrucao}
 
