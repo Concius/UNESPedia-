@@ -1,0 +1,3 @@
+,tempo_indexacao_s,num_chunks,tempo_por_chunk_ms
+ChromaDB,2.587029457092285,3,862.3431523640951
+FAISS,2.067265510559082,3,689.088503519694

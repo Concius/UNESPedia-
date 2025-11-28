@@ -1,0 +1,6 @@
+,tempo_total_ms,tempo_total_ms,tempo_total_ms,tempo_total_ms,num_citacoes,num_citacoes,tem_citacoes,custo_estimado_usd
+,mean,std,min,max,mean,sum,sum,sum
+provider,,,,,,,,
+Claude,5861.732,1618.135,4086.375,8916.748,2.143,15,7,0.013
+Deepseek,4557.042,2405.817,2854.171,9845.603,1.429,10,7,0.001
+Gemini,5232.208,3581.835,1408.257,10500.88,1.0,7,6,0.0

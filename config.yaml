@@ -32,7 +32,7 @@ llm_defaults:
 llm_providers:
   Gemini:
     api_key: SUA_CHAVE_API_GEMINI_AQUI
-    model: gemini-1.5-flash
+    model: gemini-2.5-flash
   OpenAI:
     api_key: SUA_CHAVE_API_OPENAI_AQUI
     model: gpt-4o
