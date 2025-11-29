@@ -267,7 +267,6 @@ Os scripts de avaliação estão disponíveis em `/avaliacao/`:
 **MIT License**
 
 ### Permissões
-- ✅ Uso comercial
 - ✅ Modificação
 - ✅ Distribuição
 - ✅ Uso privado
