@@ -11,8 +11,6 @@
   <h3>Converse com Seus Artigos de Forma Inteligente</h3>
 </div>
 
-por <a href="https://github.com/Concius">Concius---
-
 ## 📖 Sobre o Projeto
 
 O **UNESPedia** é uma aplicação web desenvolvida como parte da disciplina de Aprendizado Profundo do PPGCC-Unesp. Ele utiliza a técnica de **Retrieval-Augmented Generation (RAG)** para permitir que você converse com os seus próprios documentos, transformando artigos densos em diálogos interativos.
