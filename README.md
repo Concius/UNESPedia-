@@ -11,6 +11,19 @@
   <h3>Converse com Seus Artigos de Forma Inteligente</h3>
 </div>
 
+---
+
+## 🎓 Contexto Acadêmico
+
+Trabalho realizado para a disciplina de **Aprendizado Profundo** do [Programa de Pós-Graduação em Ciência da Computação (PPGCC) da Unesp](https://www.ibilce.unesp.br/#!/pos-graduacao/programas-de-pos-graduacao/ciencia-da-computacao), ministrada pelo **Prof. Dr. Denis Henrique Pinheiro Salvadeo**.
+
+### Integrantes
+- **Arthur Andreazza Marinho** - arthur.andreazza-marinho@unesp.br
+- **Carlos Tojeiro**
+- **Maria Eduarda**
+
+---
+
 ## 📖 Sobre o Projeto
 
 O **UNESPedia** é uma aplicação web desenvolvida como parte da disciplina de Aprendizado Profundo do PPGCC-Unesp. Ele utiliza a técnica de **Retrieval-Augmented Generation (RAG)** para permitir que você converse com os seus próprios documentos, transformando artigos densos em diálogos interativos.
@@ -267,6 +280,7 @@ Os scripts de avaliação estão disponíveis em `/avaliacao/`:
 **MIT License**
 
 ### Permissões
+- ✅ Uso comercial
 - ✅ Modificação
 - ✅ Distribuição
 - ✅ Uso privado
@@ -287,5 +301,6 @@ Toda colaboração é bem-vinda para tornar o UNESPedia ainda mais útil para a 
 
 <div align="center">
   <p><strong>Desenvolvido para a disciplina de Aprendizado Profundo - PPGCC Unesp</strong></p>
-  <p>Feito com 💙</a></p>
+  <p>Feito com 💙 por <a href="https://github.com/Concius">Concius</a></p>
 </div>
+
