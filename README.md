@@ -19,8 +19,8 @@ Trabalho realizado para a disciplina de **Aprendizado Profundo** do [Programa de
 
 ### Integrantes
 - **Arthur Andreazza Marinho** - arthur.andreazza-marinho@unesp.br
-- **Carlos Tojeiro**
-- **Maria Eduarda**
+- **Carlos Alexandre Carvalho Tojeiro** - carlos.tojeiro@unesp.br
+- **Maria Eduarda Lingo de Almeida** - maria-lingo.almeida@unesp.br
 
 ---
 
